@@ -13,6 +13,7 @@ let memoryDatabase: {
   sale_items: SaleItem[];
   purchases: Purchase[];
   purchase_items: PurchaseItem[];
+  tally_sync_logs: TallySyncLog[];
   nextCustomerId: number;
   nextSupplierId: number;
   nextProductTypeId: number;
@@ -21,6 +22,7 @@ let memoryDatabase: {
   nextSaleItemId: number;
   nextPurchaseId: number;
   nextPurchaseItemId: number;
+  nextTallySyncLogId: number;
 } = {
   customers: [],
   suppliers: [],
@@ -35,6 +37,7 @@ let memoryDatabase: {
   sale_items: [],
   purchases: [],
   purchase_items: [],
+  tally_sync_logs: [],
   nextCustomerId: 1,
   nextSupplierId: 1,
   nextProductTypeId: 5,
@@ -43,6 +46,7 @@ let memoryDatabase: {
   nextSaleItemId: 1,
   nextPurchaseId: 1,
   nextPurchaseItemId: 1,
+  nextTallySyncLogId: 1,
 };
 
 // TypeScript Interfaces
@@ -169,6 +173,28 @@ export interface CreatePurchaseInput {
     gst_rate: number;
     expiry_date?: string;
   }[];
+}
+
+export interface TallySyncLog {
+  id: number;
+  entity_type: string;
+  entity_id?: number;
+  xml_type: string;
+  request_xml: string;
+  response_xml?: string;
+  status: "success" | "failed" | "pending";
+  error_message?: string;
+  created_at: string;
+}
+
+export interface CreateTallySyncLogInput {
+  entity_type: string;
+  entity_id?: number;
+  xml_type: string;
+  request_xml: string;
+  response_xml?: string;
+  status: "success" | "failed" | "pending";
+  error_message?: string;
 }
 
 // Database connection
@@ -319,6 +345,21 @@ export async function initDatabase(): Promise<void> {
       expiry_date TEXT,
       FOREIGN KEY(purchase_id) REFERENCES purchases(id),
       FOREIGN KEY(product_id) REFERENCES products(id)
+    )
+  `);
+
+  // Create tally_sync_logs table
+  await database.execute(`
+    CREATE TABLE IF NOT EXISTS tally_sync_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER,
+      xml_type TEXT NOT NULL,
+      request_xml TEXT NOT NULL,
+      response_xml TEXT,
+      status TEXT NOT NULL,
+      error_message TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -873,4 +914,108 @@ export async function getPendingPurchasesCount(): Promise<number> {
   }
 
   return memoryDatabase.purchases.filter((p) => p.tally_sync_status === "pending").length;
+}
+
+// Tally Sync Log functions
+
+export async function addTallySyncLog(input: CreateTallySyncLogInput): Promise<TallySyncLog> {
+  if (isTauri) {
+    const database = await getDb();
+    if (database) {
+      const id = await database.execute(
+        `INSERT INTO tally_sync_logs 
+        (entity_type, entity_id, xml_type, request_xml, response_xml, status, error_message, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [
+          input.entity_type,
+          input.entity_id || null,
+          input.xml_type,
+          input.request_xml,
+          input.response_xml || null,
+          input.status,
+          input.error_message || null,
+        ]
+      );
+
+      const result = await database.select<TallySyncLog[]>(
+        "SELECT * FROM tally_sync_logs WHERE id = ?",
+        [id]
+      );
+
+      return result[0] as TallySyncLog;
+    }
+  }
+
+  const id = memoryDatabase.nextTallySyncLogId++;
+  const log: TallySyncLog = {
+    id,
+    entity_type: input.entity_type,
+    entity_id: input.entity_id,
+    xml_type: input.xml_type,
+    request_xml: input.request_xml,
+    response_xml: input.response_xml,
+    status: input.status,
+    error_message: input.error_message,
+    created_at: new Date().toISOString(),
+  };
+
+  memoryDatabase.tally_sync_logs.push(log);
+  return log;
+}
+
+export async function getTallySyncLogs(): Promise<TallySyncLog[]> {
+  if (isTauri) {
+    const database = await getDb();
+    if (database) {
+      return await database.select<TallySyncLog[]>(
+        "SELECT * FROM tally_sync_logs ORDER BY created_at DESC"
+      );
+    }
+  }
+
+  return memoryDatabase.tally_sync_logs.sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+export async function updateSaleSyncStatus(
+  saleId: number,
+  status: "pending" | "success" | "failed"
+): Promise<void> {
+  if (isTauri) {
+    const database = await getDb();
+    if (database) {
+      await database.execute(
+        "UPDATE sales SET tally_sync_status = ? WHERE id = ?",
+        [status, saleId]
+      );
+      return;
+    }
+  }
+
+  const sale = memoryDatabase.sales.find((s) => s.id === saleId);
+  if (sale) {
+    sale.tally_sync_status = status;
+  }
+}
+
+export async function updatePurchaseSyncStatus(
+  purchaseId: number,
+  status: "pending" | "success" | "failed"
+): Promise<void> {
+  if (isTauri) {
+    const database = await getDb();
+    if (database) {
+      await database.execute(
+        "UPDATE purchases SET tally_sync_status = ? WHERE id = ?",
+        [status, purchaseId]
+      );
+      return;
+    }
+  }
+
+  const purchase = memoryDatabase.purchases.find((p) => p.id === purchaseId);
+  if (purchase) {
+    purchase.tally_sync_status = status;
+  }
 }

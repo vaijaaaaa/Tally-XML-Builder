@@ -7,6 +7,9 @@ import {
   getSaleItems,
   getPurchases,
   getPurchaseItems,
+  addTallySyncLog,
+  updateSaleSyncStatus,
+  updatePurchaseSyncStatus,
   Customer,
   Supplier,
   Product,
@@ -18,6 +21,7 @@ import { buildLedgerCreateXml } from "../tally/xml-templates/ledger-create";
 import { buildStockItemXml } from "../tally/xml-templates/stock-item";
 import { buildSalesVoucherXml } from "../tally/xml-templates/sales-voucher";
 import { buildPurchaseVoucherXml } from "../tally/xml-templates/purchase-voucher";
+import { checkTallyConnection, sendXmlToTally } from "../tally/tally-connection";
 
 type XmlType = "customer" | "supplier" | "product" | "sales" | "purchase";
 
@@ -35,6 +39,19 @@ export const XMLPreview: React.FC = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Tally connection state
+  const [tallyHost, setTallyHost] = useState("localhost");
+  const [tallyPort, setTallyPort] = useState("9000");
+  const [connectionMessage, setConnectionMessage] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<"idle" | "checking" | "success" | "failed">(
+    "idle"
+  );
+  const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "success" | "failed">("idle");
+  const [sendMessage, setSendMessage] = useState<string | null>(null);
+  const [responsePreview, setResponsePreview] = useState<string | null>(null);
+  const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
 
   // Load all data on mount
   useEffect(() => {
@@ -165,8 +182,98 @@ export const XMLPreview: React.FC = () => {
 
       const fullXml = buildTallyEnvelope({ reportName, bodyXml });
       setXmlContent(fullXml);
+
+      // Track sale/purchase IDs for sync status updates
+      if (xmlType === "sales") {
+        setSelectedSaleId(selectedId);
+      } else if (xmlType === "purchase") {
+        setSelectedPurchaseId(selectedId);
+      }
     } catch (err) {
       setError("Failed to generate XML: " + (err instanceof Error ? err.message : String(err)));
+      console.error(err);
+    }
+  };
+
+  const handleCheckConnection = async () => {
+    try {
+      setConnectionStatus("checking");
+      setConnectionMessage(null);
+      setResponsePreview(null);
+
+      const result = await checkTallyConnection({
+        host: tallyHost,
+        port: tallyPort,
+      });
+
+      if (result.success) {
+        setConnectionStatus("success");
+        setConnectionMessage("✓ Connected to TallyPrime");
+        setResponsePreview(result.responseText?.substring(0, 200) + "...");
+      } else {
+        setConnectionStatus("failed");
+        setConnectionMessage("✗ Failed to connect: " + (result.error || "No response"));
+        setResponsePreview(null);
+      }
+    } catch (err) {
+      setConnectionStatus("failed");
+      setConnectionMessage("✗ Error: " + (err instanceof Error ? err.message : String(err)));
+      console.error(err);
+    }
+  };
+
+  const handleSendToTally = async () => {
+    if (!xmlContent || xmlContent.includes("Select an XML type")) {
+      setSendMessage("Please generate XML first");
+      return;
+    }
+
+    try {
+      setSendStatus("sending");
+      setSendMessage(null);
+      setResponsePreview(null);
+
+      const result = await sendXmlToTally(xmlContent, {
+        host: tallyHost,
+        port: tallyPort,
+      });
+
+      // Save sync log
+      await addTallySyncLog({
+        entity_type: xmlType,
+        entity_id: selectedId || undefined,
+        xml_type: xmlType,
+        request_xml: xmlContent,
+        response_xml: result.responseText,
+        status: result.success ? "success" : "failed",
+        error_message: result.error || undefined,
+      });
+
+      // Update sync status for vouchers
+      if (xmlType === "sales" && selectedSaleId) {
+        await updateSaleSyncStatus(selectedSaleId, result.success ? "success" : "failed");
+        // Reload sales data
+        const salesData = await getSales();
+        setSales(salesData);
+      } else if (xmlType === "purchase" && selectedPurchaseId) {
+        await updatePurchaseSyncStatus(selectedPurchaseId, result.success ? "success" : "failed");
+        // Reload purchases data
+        const purchasesData = await getPurchases();
+        setPurchases(purchasesData);
+      }
+
+      if (result.success) {
+        setSendStatus("success");
+        setSendMessage("✓ XML sent successfully to TallyPrime");
+      } else {
+        setSendStatus("failed");
+        setSendMessage("✗ Send failed: " + (result.error || "Tally rejected the XML"));
+      }
+
+      setResponsePreview(result.responseText?.substring(0, 500) + "...");
+    } catch (err) {
+      setSendStatus("failed");
+      setSendMessage("✗ Error: " + (err instanceof Error ? err.message : String(err)));
       console.error(err);
     }
   };
@@ -269,31 +376,91 @@ export const XMLPreview: React.FC = () => {
 
       {/* Action Buttons */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Actions</h2>
-        <div className="flex flex-wrap gap-4">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Tally Connection</h2>
+
+        {/* Tally Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tally Host</label>
+            <input
+              type="text"
+              value={tallyHost}
+              onChange={(e) => setTallyHost(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tally Port</label>
+            <input
+              type="text"
+              value={tallyPort}
+              onChange={(e) => setTallyPort(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {/* Connection Buttons */}
+        <div className="flex flex-wrap gap-4 mb-4">
           <button
-            disabled
-            className="px-6 py-2 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed"
-            title="Not yet implemented"
+            onClick={handleCheckConnection}
+            disabled={connectionStatus === "checking"}
+            className="px-6 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Check Tally Connection
+            {connectionStatus === "checking" ? "Checking..." : "Check Tally Connection"}
           </button>
 
           <button
-            disabled
-            className="px-6 py-2 bg-gray-400 text-white font-medium rounded-lg cursor-not-allowed"
-            title="Not yet implemented"
+            onClick={handleSendToTally}
+            disabled={sendStatus === "sending" || !xmlContent || xmlContent.includes("Select an")}
+            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Send to Tally
+            {sendStatus === "sending" ? "Sending..." : "Send to Tally"}
           </button>
         </div>
+
+        {/* Connection Status */}
+        {connectionStatus !== "idle" && connectionMessage && (
+          <div
+            className={`mb-4 p-4 rounded-lg ${
+              connectionStatus === "success"
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-red-50 border border-red-200 text-red-800"
+            }`}
+          >
+            <p className="text-sm font-medium">{connectionMessage}</p>
+            {responsePreview && (
+              <p className="text-xs mt-2 text-gray-600 max-h-20 overflow-auto">
+                Response: {responsePreview}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Send Status */}
+        {sendStatus !== "idle" && sendMessage && (
+          <div
+            className={`mb-4 p-4 rounded-lg ${
+              sendStatus === "success"
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-red-50 border border-red-200 text-red-800"
+            }`}
+          >
+            <p className="text-sm font-medium">{sendMessage}</p>
+            {responsePreview && (
+              <p className="text-xs mt-2 text-gray-600 max-h-32 overflow-auto font-mono">
+                {responsePreview}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Info Card */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-blue-800 text-sm">
-          <strong>Note:</strong> This page generates Tally-compatible XML from saved data. 
-          Check Connection and Send to Tally will be available in a future update.
+          <strong>Note:</strong> This page generates Tally-compatible XML from saved data and sends it to TallyPrime.
+          Ensure TallyPrime is running on the specified host and port (default: localhost:9000).
         </p>
       </div>
     </div>
