@@ -31,21 +31,39 @@ export function buildSalesVoucherXml(input: SalesVoucherInput): string {
     tallyTotalAmount,
   } = input;
 
+  // Validate required fields
+  if (!voucherDate || !voucherDate.trim()) {
+    throw new Error("Voucher date is required for sales voucher");
+  }
+  if (!customerName || !customerName.trim()) {
+    throw new Error("Customer name is required for sales voucher");
+  }
+  if (!productName || !productName.trim()) {
+    throw new Error("Product name is required for sales voucher");
+  }
+
   const formattedDate = formatDateForTally(voucherDate);
+  
+  // Verify formatted date is valid (should be YYYYMMDD, 8 digits)
+  if (!formattedDate || !/^\d{8}$/.test(formattedDate)) {
+    throw new Error(`Invalid voucher date after formatting: "${formattedDate}"`);
+  }
 
   // Customer ledger amount is negative of total (payment received)
   const customerAmount = -tallyTotalAmount;
 
   let xml = `          <VOUCHER VCHTYPE="Sales" ACTION="Create" OBJVIEW="Invoice Voucher View">
             <DATE>${formattedDate}</DATE>
+            <EFFECTIVEDATE>${formattedDate}</EFFECTIVEDATE>
             <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
             <PARTYLEDGERNAME>${escapeXml(customerName)}</PARTYLEDGERNAME>
             <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
-            <ALLLEDGERENTRIES.LIST>
+            <ISINVOICE>Yes</ISINVOICE>
+            <LEDGERENTRIES.LIST>
               <LEDGERNAME>${escapeXml(customerName)}</LEDGERNAME>
               <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
               <AMOUNT>${customerAmount}</AMOUNT>
-            </ALLLEDGERENTRIES.LIST>
+            </LEDGERENTRIES.LIST>
             <ALLINVENTORYENTRIES.LIST>
               <STOCKITEMNAME>${escapeXml(productName)}</STOCKITEMNAME>
               <RATE>${tallyPriceNo1}/${escapeXml(unit)}</RATE>
@@ -53,11 +71,11 @@ export function buildSalesVoucherXml(input: SalesVoucherInput): string {
               <BILLEDQTY>${qty} ${escapeXml(unit)}</BILLEDQTY>
               <AMOUNT>${tallyTaxableAmount}</AMOUNT>
             </ALLINVENTORYENTRIES.LIST>
-            <ALLLEDGERENTRIES.LIST>
+            <LEDGERENTRIES.LIST>
               <LEDGERNAME>Output GST</LEDGERNAME>
               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
               <AMOUNT>${gstAmount}</AMOUNT>
-            </ALLLEDGERENTRIES.LIST>
+            </LEDGERENTRIES.LIST>
           </VOUCHER>`;
 
   return xml;

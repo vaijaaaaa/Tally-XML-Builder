@@ -1,7 +1,27 @@
 import Database from "@tauri-apps/plugin-sql";
 
-// Check if we're running in Tauri context
-const isTauri = typeof (window as any).__TAURI__ !== "undefined";
+// Check if we're running in Tauri context - async to allow time for Tauri to inject __TAURI__
+let isTauri = false;
+let isTauriReady = false;
+
+async function detectTauri(): Promise<boolean> {
+  if (isTauriReady) return isTauri;
+
+  // Wait up to 5 seconds for Tauri to inject __TAURI__
+  for (let i = 0; i < 100; i++) {
+    if (typeof (window as any).__TAURI__ !== "undefined") {
+      isTauri = true;
+      isTauriReady = true;
+      console.log("✓ Tauri context detected - using SQLite");
+      return true;
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  isTauriReady = true;
+  console.log("✗ Tauri context NOT detected - using in-memory storage");
+  return false;
+}
 
 // In-memory storage for development
 let memoryDatabase: {
@@ -201,15 +221,17 @@ export interface CreateTallySyncLogInput {
 let db: Database | null = null;
 
 export async function getDb(): Promise<Database | null> {
-  if (!isTauri) {
+  const isTauriContext = await detectTauri();
+  if (!isTauriContext) {
     return null; // In-memory mode
   }
 
   if (!db) {
     try {
       db = await Database.load("sqlite:farmstack-tally-demo.db");
+      console.log("✓ SQLite database loaded");
     } catch (err) {
-      console.error("Failed to load database:", err);
+      console.error("✗ Failed to load database:", err);
       return null;
     }
   }
@@ -217,7 +239,8 @@ export async function getDb(): Promise<Database | null> {
 }
 
 export async function initDatabase(): Promise<void> {
-  if (!isTauri) {
+  const isTauriContext = await detectTauri();
+  if (!isTauriContext) {
     return; // Already initialized in-memory
   }
 
@@ -404,7 +427,7 @@ export async function addCustomer(input: {
     created_at: new Date().toISOString(),
   };
 
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.execute(
@@ -427,7 +450,7 @@ export async function addCustomer(input: {
 }
 
 export async function getCustomers(): Promise<Customer[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<Customer[]>(
@@ -455,7 +478,7 @@ export async function addSupplier(input: {
     created_at: new Date().toISOString(),
   };
 
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.execute(
@@ -478,7 +501,7 @@ export async function addSupplier(input: {
 }
 
 export async function getSuppliers(): Promise<Supplier[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<Supplier[]>(
@@ -502,7 +525,7 @@ export async function addProductType(input: {
     created_at: new Date().toISOString(),
   };
 
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.execute(
@@ -525,7 +548,7 @@ export async function addProductType(input: {
 }
 
 export async function getProductTypes(): Promise<ProductType[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<ProductType[]>(
@@ -565,7 +588,7 @@ export async function addProduct(input: {
     product_type_name: productTypeName,
   };
 
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.execute(
@@ -599,7 +622,7 @@ export async function addProduct(input: {
 }
 
 export async function getProducts(): Promise<Product[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<Product[]>(
@@ -646,7 +669,7 @@ export async function addSale(input: CreateSaleInput): Promise<Sale> {
     created_at: new Date().toISOString(),
   };
 
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.execute(
@@ -728,7 +751,7 @@ export async function addSale(input: CreateSaleInput): Promise<Sale> {
 }
 
 export async function getSales(): Promise<Sale[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<Sale[]>(
@@ -741,7 +764,7 @@ export async function getSales(): Promise<Sale[]> {
 }
 
 export async function getSaleItems(saleId: number): Promise<SaleItem[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<SaleItem[]>(
@@ -755,7 +778,7 @@ export async function getSaleItems(saleId: number): Promise<SaleItem[]> {
 }
 
 export async function getPendingSalesCount(): Promise<number> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.select<Array<{ count: number }>>(
@@ -798,7 +821,7 @@ export async function addPurchase(input: CreatePurchaseInput): Promise<Purchase>
     created_at: new Date().toISOString(),
   };
 
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.execute(
@@ -876,7 +899,7 @@ export async function addPurchase(input: CreatePurchaseInput): Promise<Purchase>
 }
 
 export async function getPurchases(): Promise<Purchase[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<Purchase[]>(
@@ -889,7 +912,7 @@ export async function getPurchases(): Promise<Purchase[]> {
 }
 
 export async function getPurchaseItems(purchaseId: number): Promise<PurchaseItem[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<PurchaseItem[]>(
@@ -903,7 +926,7 @@ export async function getPurchaseItems(purchaseId: number): Promise<PurchaseItem
 }
 
 export async function getPendingPurchasesCount(): Promise<number> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const result = await database.select<Array<{ count: number }>>(
@@ -919,7 +942,7 @@ export async function getPendingPurchasesCount(): Promise<number> {
 // Tally Sync Log functions
 
 export async function addTallySyncLog(input: CreateTallySyncLogInput): Promise<TallySyncLog> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       const id = await database.execute(
@@ -964,7 +987,7 @@ export async function addTallySyncLog(input: CreateTallySyncLogInput): Promise<T
 }
 
 export async function getTallySyncLogs(): Promise<TallySyncLog[]> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       return await database.select<TallySyncLog[]>(
@@ -982,7 +1005,7 @@ export async function updateSaleSyncStatus(
   saleId: number,
   status: "pending" | "success" | "failed"
 ): Promise<void> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       await database.execute(
@@ -1003,7 +1026,7 @@ export async function updatePurchaseSyncStatus(
   purchaseId: number,
   status: "pending" | "success" | "failed"
 ): Promise<void> {
-  if (isTauri) {
+  if (await detectTauri()) {
     const database = await getDb();
     if (database) {
       await database.execute(

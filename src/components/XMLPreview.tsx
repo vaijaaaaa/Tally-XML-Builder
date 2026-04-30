@@ -16,7 +16,7 @@ import {
   Sale,
   Purchase,
 } from "../lib/db";
-import { buildTallyEnvelope } from "../tally/xml-builder";
+import { buildMasterEnvelope, buildVoucherEnvelope } from "../tally/xml-builder";
 import { buildLedgerCreateXml } from "../tally/xml-templates/ledger-create";
 import { buildStockItemXml } from "../tally/xml-templates/stock-item";
 import { buildSalesVoucherXml } from "../tally/xml-templates/sales-voucher";
@@ -99,7 +99,6 @@ export const XMLPreview: React.FC = () => {
     try {
       setError(null);
       let bodyXml = "";
-      let reportName: "All Masters" | "Vouchers" = "All Masters";
 
       if (xmlType === "customer") {
         const customer = customers.find((c) => c.id === selectedId);
@@ -153,7 +152,6 @@ export const XMLPreview: React.FC = () => {
           gstAmount: item.gst_amount,
           tallyTotalAmount: item.tally_total_amount,
         });
-        reportName = "Vouchers";
       } else if (xmlType === "purchase") {
         const purchase = purchases.find((p) => p.id === selectedId);
         if (!purchase) throw new Error("Purchase not found");
@@ -177,10 +175,17 @@ export const XMLPreview: React.FC = () => {
           gstAmount: item.gst_amount,
           totalAmount: item.total_amount,
         });
-        reportName = "Vouchers";
       }
 
-      const fullXml = buildTallyEnvelope({ reportName, bodyXml });
+      // Use proper envelope based on XML type
+      let fullXml: string;
+      if (xmlType === "sales" || xmlType === "purchase") {
+        // Vouchers use a different envelope structure
+        fullXml = buildVoucherEnvelope(bodyXml);
+      } else {
+        // Masters use the standard master envelope
+        fullXml = buildMasterEnvelope({ reportName: "All Masters", bodyXml });
+      }
       setXmlContent(fullXml);
 
       // Track sale/purchase IDs for sync status updates
