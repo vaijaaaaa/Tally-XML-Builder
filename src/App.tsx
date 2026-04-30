@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import { Dashboard } from "./components/Dashboard";
 import { Sales } from "./components/Sales";
@@ -10,6 +10,7 @@ import { ProductTypes } from "./components/ProductTypes";
 import { XMLPreview } from "./components/XMLPreview";
 import { SyncLogs } from "./components/SyncLogs";
 import { Settings } from "./components/Settings";
+import { initDatabase } from "./lib/db";
 
 type Page =
   | "dashboard"
@@ -25,8 +26,32 @@ type Page =
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
+  const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initDatabase()
+      .then(() => setDbReady(true))
+      .catch((err) => {
+        console.error("Database init error:", err);
+        setDbError("Failed to initialize database");
+      });
+  }, []);
 
   const renderPage = () => {
+    if (!dbReady) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Initializing database...</p>
+            {dbError && (
+              <p className="text-red-600 text-sm">{dbError}</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     switch (currentPage) {
       case "dashboard":
         return <Dashboard />;

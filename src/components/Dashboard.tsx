@@ -1,6 +1,41 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { getCustomers, getSuppliers, getProducts, getPendingSalesCount, getPendingPurchasesCount } from "../lib/db";
 
 export const Dashboard: React.FC = () => {
+  const [counts, setCounts] = useState({
+    customers: 0,
+    suppliers: 0,
+    products: 0,
+    pendingTallySync: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadCounts();
+  }, []);
+
+  const loadCounts = async () => {
+    try {
+      const [customers, suppliers, products, pendingSales, pendingPurchases] = await Promise.all([
+        getCustomers(),
+        getSuppliers(),
+        getProducts(),
+        getPendingSalesCount(),
+        getPendingPurchasesCount(),
+      ]);
+      setCounts({
+        customers: customers.length,
+        suppliers: suppliers.length,
+        products: products.length,
+        pendingTallySync: pendingSales + pendingPurchases,
+      });
+    } catch (err) {
+      console.error("Error loading counts:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
@@ -9,22 +44,22 @@ export const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
           <div className="text-gray-600 text-sm font-semibold">Customers</div>
-          <div className="text-3xl font-bold text-gray-800 mt-2">0</div>
+          <div className="text-3xl font-bold text-gray-800 mt-2">{loading ? "-" : counts.customers}</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
           <div className="text-gray-600 text-sm font-semibold">Suppliers</div>
-          <div className="text-3xl font-bold text-gray-800 mt-2">0</div>
+          <div className="text-3xl font-bold text-gray-800 mt-2">{loading ? "-" : counts.suppliers}</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
           <div className="text-gray-600 text-sm font-semibold">Products</div>
-          <div className="text-3xl font-bold text-gray-800 mt-2">0</div>
+          <div className="text-3xl font-bold text-gray-800 mt-2">{loading ? "-" : counts.products}</div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
           <div className="text-gray-600 text-sm font-semibold">Pending Tally Sync</div>
-          <div className="text-3xl font-bold text-gray-800 mt-2">0</div>
+          <div className="text-3xl font-bold text-gray-800 mt-2">{loading ? "-" : counts.pendingTallySync}</div>
         </div>
       </div>
 
