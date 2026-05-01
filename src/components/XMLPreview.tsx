@@ -22,6 +22,7 @@ import { buildStockItemXml } from "../tally/xml-templates/stock-item";
 import { buildSalesVoucherXml } from "../tally/xml-templates/sales-voucher";
 import { buildPurchaseVoucherXml } from "../tally/xml-templates/purchase-voucher";
 import { checkTallyConnection, sendXmlToTally } from "../tally/tally-connection";
+import { parseTallyResponse, formatTallyErrorDisplay } from "../tally/response-parser";
 
 type XmlType = "customer" | "supplier" | "product" | "sales" | "purchase";
 
@@ -50,6 +51,7 @@ export const XMLPreview: React.FC = () => {
   const [sendStatus, setSendStatus] = useState<"idle" | "sending" | "success" | "failed">("idle");
   const [sendMessage, setSendMessage] = useState<string | null>(null);
   const [responsePreview, setResponsePreview] = useState<string | null>(null);
+  const [fullResponseDisplay, setFullResponseDisplay] = useState<string | null>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
 
@@ -205,20 +207,25 @@ export const XMLPreview: React.FC = () => {
       setConnectionStatus("checking");
       setConnectionMessage(null);
       setResponsePreview(null);
+      setFullResponseDisplay(null);
 
       const result = await checkTallyConnection({
         host: tallyHost,
         port: tallyPort,
       });
 
+      console.log("✓ Full Tally check response:", result.responseText);
+
       if (result.success) {
         setConnectionStatus("success");
         setConnectionMessage("✓ Connected to TallyPrime");
-        setResponsePreview(result.responseText?.substring(0, 200) + "...");
+        setResponsePreview(result.responseText);
+        setFullResponseDisplay(result.responseText);
       } else {
         setConnectionStatus("failed");
         setConnectionMessage("✗ Failed to connect: " + (result.error || "No response"));
-        setResponsePreview(null);
+        setResponsePreview(result.responseText);
+        setFullResponseDisplay(result.responseText);
       }
     } catch (err) {
       setConnectionStatus("failed");
@@ -237,11 +244,22 @@ export const XMLPreview: React.FC = () => {
       setSendStatus("sending");
       setSendMessage(null);
       setResponsePreview(null);
+      setFullResponseDisplay(null);
 
       const result = await sendXmlToTally(xmlContent, {
         host: tallyHost,
         port: tallyPort,
       });
+
+      // Log full response to console
+      console.log("✓ Full Tally send response:", result.responseText);
+
+      // Parse the response
+      const parsed = parseTallyResponse(result.responseText);
+
+      // Format for display
+      const displayText = formatTallyErrorDisplay(parsed);
+      setFullResponseDisplay(displayText);
 
       // Save sync log
       await addTallySyncLog({
@@ -250,32 +268,32 @@ export const XMLPreview: React.FC = () => {
         xml_type: xmlType,
         request_xml: xmlContent,
         response_xml: result.responseText,
-        status: result.success ? "success" : "failed",
-        error_message: result.error || undefined,
+        status: parsed.success ? "success" : "failed",
+        error_message: parsed.readableError || undefined,
       });
 
       // Update sync status for vouchers
       if (xmlType === "sales" && selectedSaleId) {
-        await updateSaleSyncStatus(selectedSaleId, result.success ? "success" : "failed");
+        await updateSaleSyncStatus(selectedSaleId, parsed.success ? "success" : "failed");
         // Reload sales data
         const salesData = await getSales();
         setSales(salesData);
       } else if (xmlType === "purchase" && selectedPurchaseId) {
-        await updatePurchaseSyncStatus(selectedPurchaseId, result.success ? "success" : "failed");
+        await updatePurchaseSyncStatus(selectedPurchaseId, parsed.success ? "success" : "failed");
         // Reload purchases data
         const purchasesData = await getPurchases();
         setPurchases(purchasesData);
       }
 
-      if (result.success) {
+      if (parsed.success) {
         setSendStatus("success");
         setSendMessage("✓ XML sent successfully to TallyPrime");
       } else {
         setSendStatus("failed");
-        setSendMessage("✗ Send failed: " + (result.error || "Tally rejected the XML"));
+        setSendMessage("✗ Tally XML import failed");
       }
 
-      setResponsePreview(result.responseText?.substring(0, 500) + "...");
+      setResponsePreview(parsed.readableError || result.responseText);
     } catch (err) {
       setSendStatus("failed");
       setSendMessage("✗ Error: " + (err instanceof Error ? err.message : String(err)));
@@ -434,10 +452,10 @@ export const XMLPreview: React.FC = () => {
             }`}
           >
             <p className="text-sm font-medium">{connectionMessage}</p>
-            {responsePreview && (
-              <p className="text-xs mt-2 text-gray-600 max-h-20 overflow-auto">
-                Response: {responsePreview}
-              </p>
+            {fullResponseDisplay && (
+              <div className="text-xs mt-3 bg-white text-gray-800 rounded p-3 border border-gray-200 font-mono overflow-auto max-h-96">
+                <pre className="whitespace-pre-wrap break-words text-xs">{fullResponseDisplay}</pre>
+              </div>
             )}
           </div>
         )}
@@ -452,10 +470,10 @@ export const XMLPreview: React.FC = () => {
             }`}
           >
             <p className="text-sm font-medium">{sendMessage}</p>
-            {responsePreview && (
-              <p className="text-xs mt-2 text-gray-600 max-h-32 overflow-auto font-mono">
-                {responsePreview}
-              </p>
+            {fullResponseDisplay && (
+              <div className="text-xs mt-3 bg-white text-gray-800 rounded p-3 border border-gray-200 font-mono overflow-auto max-h-96">
+                <pre className="whitespace-pre-wrap break-words text-xs">{fullResponseDisplay}</pre>
+              </div>
             )}
           </div>
         )}

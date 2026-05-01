@@ -32,26 +32,38 @@ async fn check_tally_connection(
             let status = response.status().as_u16();
             
             match response.text().await {
-                Ok(text) => Ok(TallyResponse {
-                    success,
-                    status: Some(status),
-                    response_text: text,
-                    error: None,
-                }),
-                Err(e) => Ok(TallyResponse {
-                    success: false,
-                    status: Some(status),
-                    response_text: "Failed to read response".to_string(),
-                    error: Some(format!("Read error: {}", e)),
-                }),
+                Ok(text) => {
+                    eprintln!("--- TALLY CONNECTION CHECK (HTTP {}) ---", status);
+                    eprintln!("{}", text);
+                    eprintln!("--- END CONNECTION CHECK ---");
+
+                    Ok(TallyResponse {
+                        success,
+                        status: Some(status),
+                        response_text: text,
+                        error: None,
+                    })
+                }
+                Err(e) => {
+                    eprintln!("Failed to read Tally connection response: {}", e);
+                    Ok(TallyResponse {
+                        success: false,
+                        status: Some(status),
+                        response_text: "Failed to read response".to_string(),
+                        error: Some(format!("Read error: {}", e)),
+                    })
+                }
             }
         }
-        Err(e) => Ok(TallyResponse {
-            success: false,
-            status: None,
-            response_text: "No response".to_string(),
-            error: Some(format!("Connection failed: {}", e)),
-        }),
+        Err(e) => {
+            eprintln!("Failed to connect to Tally: {}", e);
+            Ok(TallyResponse {
+                success: false,
+                status: None,
+                response_text: "No response".to_string(),
+                error: Some(format!("Connection failed: {}", e)),
+            })
+        }
     }
 }
 
@@ -83,6 +95,11 @@ async fn send_xml_to_tally(
                         && !text.contains("<ERRORS>1</ERRORS>")
                         && !text.contains("<EXCEPTIONS>1</EXCEPTIONS>");
 
+                    // Log complete response
+                    eprintln!("--- TALLY RESPONSE (HTTP {}) ---", status);
+                    eprintln!("{}", text);
+                    eprintln!("--- END RESPONSE ---");
+
                     Ok(TallyResponse {
                         success,
                         status: Some(status),
@@ -90,20 +107,26 @@ async fn send_xml_to_tally(
                         error: None,
                     })
                 }
-                Err(e) => Ok(TallyResponse {
-                    success: false,
-                    status: Some(status),
-                    response_text: "Failed to read response".to_string(),
-                    error: Some(format!("Read error: {}", e)),
-                }),
+                Err(e) => {
+                    eprintln!("Failed to read Tally response: {}", e);
+                    Ok(TallyResponse {
+                        success: false,
+                        status: Some(status),
+                        response_text: "Failed to read response".to_string(),
+                        error: Some(format!("Read error: {}", e)),
+                    })
+                }
             }
         }
-        Err(e) => Ok(TallyResponse {
-            success: false,
-            status: None,
-            response_text: "No response".to_string(),
-            error: Some(format!("Send failed: {}", e)),
-        }),
+        Err(e) => {
+            eprintln!("Failed to send XML to Tally: {}", e);
+            Ok(TallyResponse {
+                success: false,
+                status: None,
+                response_text: "No response".to_string(),
+                error: Some(format!("Send failed: {}", e)),
+            })
+        }
     }
 }
 
