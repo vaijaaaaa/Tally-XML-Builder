@@ -3,6 +3,8 @@
  * Safely extracts and parses Tally XML response fields
  */
 
+import { decodeXmlEntities, extractXmlText, detectMissingMaster } from "./xml-utils";
+
 export interface ParsedTallyResponse {
   success: boolean;
   lineError: string | null;
@@ -25,7 +27,7 @@ function extractXmlValue(xml: string, tagName: string): string | null {
   try {
     const regex = new RegExp(`<${tagName}[^>]*>([^<]*)</\\s*${tagName}\\s*>`, 'i');
     const match = xml.match(regex);
-    return match ? match[1].trim() : null;
+    return match ? decodeXmlEntities(match[1].trim()) : null;
   } catch {
     return null;
   }
@@ -62,7 +64,7 @@ export function parseTallyResponse(rawResponse: string): ParsedTallyResponse {
   }
 
   // Determine success
-  const success = !lineError && exceptions !== 1 && errors !== 1;
+  const success = !lineError && exceptions !== 1 && errors !== 1 && cancelled !== "Yes";
 
   // Build readable error message
   let readableError = '';
@@ -70,14 +72,30 @@ export function parseTallyResponse(rawResponse: string): ParsedTallyResponse {
   if (lineError) {
     // Strategy 1: LINEERROR exists, show it as main error
     readableError = `Tally Line Error: ${lineError}`;
+
+    // Check if it's a missing master error
+    const missingMaster = detectMissingMaster(lineError);
+    if (missingMaster) {
+      readableError = missingMaster;
+    }
   } else if (exceptions !== null && exceptions > 0) {
     // Strategy 2: No LINEERROR but EXCEPTIONS > 0
-    readableError = 'Tally rejected the XML but did not return LINEERROR. Please check full raw response.';
+    readableError =
+      "Tally rejected the XML but did not return LINEERROR.\n\n" +
+      "This usually means:\n" +
+      "• Invalid voucher structure\n" +
+      "• Missing accounting allocation\n" +
+      "• Unbalanced ledger entries\n" +
+      "• Missing required masters (ledger, stock item, unit)\n" +
+      "• Malformed XML\n\n" +
+      "Please check the full raw response below for details.";
   } else if (errors !== null && errors > 0) {
     // Strategy 3: ERRORS flag set
-    readableError = 'Tally returned an error. Please check full raw response.';
+    readableError = "Tally returned an error. Please check full raw response.";
+  } else if (cancelled === "Yes") {
+    readableError = "Import cancelled by Tally. Check voucher details and try again.";
   } else if (!success) {
-    readableError = 'XML import failed. Please check full raw response.';
+    readableError = "XML import failed. Please check full raw response.";
   }
 
   return {
@@ -110,7 +128,7 @@ export function formatTallyErrorDisplay(parsed: ParsedTallyResponse): string {
   }
 
   // Key fields
-  if (parsed.lineError) lines.push(`• LINEERROR: ${parsed.lineError}`);
+  if (parsed.lineError) lines.push(`\n• LINEERROR: ${parsed.lineError}`);
   if (parsed.importResult) lines.push(`• IMPORTRESULT: ${parsed.importResult}`);
   if (parsed.created) lines.push(`• CREATED: ${parsed.created}`);
   if (parsed.altered) lines.push(`• ALTERED: ${parsed.altered}`);

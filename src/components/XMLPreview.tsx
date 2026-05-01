@@ -23,6 +23,7 @@ import { buildSalesVoucherXml } from "../tally/xml-templates/sales-voucher";
 import { buildPurchaseVoucherXml } from "../tally/xml-templates/purchase-voucher";
 import { checkTallyConnection, sendXmlToTally } from "../tally/tally-connection";
 import { parseTallyResponse, formatTallyErrorDisplay } from "../tally/response-parser";
+import { validateVoucher, formatValidationError } from "../tally/voucher-validator";
 
 type XmlType = "customer" | "supplier" | "product" | "sales" | "purchase";
 
@@ -54,6 +55,15 @@ export const XMLPreview: React.FC = () => {
   const [fullResponseDisplay, setFullResponseDisplay] = useState<string | null>(null);
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<number | null>(null);
+
+  // Ledger configuration for vouchers
+  const [salesLedgerName, setSalesLedgerName] = useState("Sales");
+  const [purchaseLedgerName, setPurchaseLedgerName] = useState("Purchase");
+  const [gstType, setGstType] = useState<"intra-state" | "inter-state">("intra-state");
+
+  // Validation state
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [showDebugDetails, setShowDebugDetails] = useState(false);
 
   // Load all data on mount
   useEffect(() => {
@@ -100,6 +110,7 @@ export const XMLPreview: React.FC = () => {
 
     try {
       setError(null);
+      setValidationMessage(null);
       let bodyXml = "";
 
       if (xmlType === "customer") {
@@ -145,6 +156,7 @@ export const XMLPreview: React.FC = () => {
         bodyXml = buildSalesVoucherXml({
           voucherDate: sale.voucher_date,
           customerName: sale.customer_name,
+          salesLedgerName: salesLedgerName,
           productName: item.product_name,
           qty: item.qty,
           unit: "Bag", // From product, defaulting to Bag for now
@@ -153,6 +165,7 @@ export const XMLPreview: React.FC = () => {
           tallyTaxableAmount: item.tally_taxable_amount,
           gstAmount: item.gst_amount,
           tallyTotalAmount: item.tally_total_amount,
+          gstType: gstType,
         });
       } else if (xmlType === "purchase") {
         const purchase = purchases.find((p) => p.id === selectedId);
@@ -168,6 +181,7 @@ export const XMLPreview: React.FC = () => {
           voucherDate: purchase.voucher_date,
           supplierName: purchase.supplier_name,
           supplierInvoiceNumber: purchase.supplier_invoice_number || undefined,
+          purchaseLedgerName: purchaseLedgerName,
           productName: item.product_name,
           qty: item.qty,
           unit: "Bag", // From product, defaulting to Bag for now
@@ -176,6 +190,7 @@ export const XMLPreview: React.FC = () => {
           taxableAmount: item.taxable_amount,
           gstAmount: item.gst_amount,
           totalAmount: item.total_amount,
+          gstType: gstType,
         });
       }
 
@@ -237,6 +252,7 @@ export const XMLPreview: React.FC = () => {
   const handleSendToTally = async () => {
     if (!xmlContent || xmlContent.includes("Select an XML type")) {
       setSendMessage("Please generate XML first");
+      setValidationMessage(null);
       return;
     }
 
@@ -245,7 +261,79 @@ export const XMLPreview: React.FC = () => {
       setSendMessage(null);
       setResponsePreview(null);
       setFullResponseDisplay(null);
+      setValidationMessage(null);
 
+      // Build voucher data object for validation
+      let voucherData: any = {};
+
+      // Parse dates from XML (simple extraction)
+      const dateMatch = xmlContent.match(/<DATE>(\d+)<\/DATE>/);
+      const effectiveDateMatch = xmlContent.match(/<EFFECTIVEDATE>(\d+)<\/EFFECTIVEDATE>/);
+      const voucherTypeMatch = xmlContent.match(/<VOUCHERTYPENAME>([^<]+)<\/VOUCHERTYPENAME>/);
+      const partyMatch = xmlContent.match(/<PARTYLEDGERNAME>([^<]+)<\/PARTYLEDGERNAME>/);
+
+      voucherData.date = dateMatch ? dateMatch[1] : undefined;
+      voucherData.effectiveDate = effectiveDateMatch ? effectiveDateMatch[1] : undefined;
+      voucherData.voucherType = voucherTypeMatch ? voucherTypeMatch[1] : undefined;
+      voucherData.partyLedger = partyMatch ? partyMatch[1] : undefined;
+
+      // Extract ledger entries
+      const ledgerMatches = xmlContent.matchAll(
+        /<LEDGERENTRIES\.LIST>[\s\S]*?<LEDGERNAME>([^<]+)<\/LEDGERNAME>[\s\S]*?<AMOUNT>([^<]+)<\/AMOUNT>[\s\S]*?<\/LEDGERENTRIES\.LIST>/g
+      );
+      const ledgerEntries: any[] = [];
+      for (const match of ledgerMatches) {
+        ledgerEntries.push({
+          name: match[1],
+          amount: parseFloat(match[2]),
+        });
+      }
+      voucherData.ledgerEntries = ledgerEntries;
+
+      // Extract inventory entries
+      const inventoryMatches = xmlContent.matchAll(
+        /<ALLINVENTORYENTRIES\.LIST>[\s\S]*?<STOCKITEMNAME>([^<]+)<\/STOCKITEMNAME>[\s\S]*?<RATE>([^<]+)<\/RATE>[\s\S]*?<ACTUALQTY>([^<]+)<\/ACTUALQTY>[\s\S]*?<BILLEDQTY>([^<]+)<\/BILLEDQTY>[\s\S]*?<AMOUNT>([^<]+)<\/AMOUNT>/g
+      );
+      const inventoryEntries: any[] = [];
+      for (const match of inventoryMatches) {
+        inventoryEntries.push({
+          stockItemName: match[1],
+          rate: match[2],
+          actualQty: match[3],
+          billedQty: match[4],
+          amount: parseFloat(match[5]),
+          accountingAllocations: [
+            {
+              ledgerName: salesLedgerName || purchaseLedgerName,
+              amount: parseFloat(match[5]),
+            },
+          ],
+        });
+      }
+      voucherData.inventoryEntries = inventoryEntries;
+
+      // Validate voucher
+      const validationResult = validateVoucher(voucherData);
+
+      if (!validationResult.valid) {
+        // Validation failed - show errors and don't send
+        setSendStatus("failed");
+        const errorMessage = formatValidationError(validationResult);
+        setValidationMessage(errorMessage);
+        console.error("❌ Validation failed:\n", errorMessage);
+        return;
+      }
+
+      // Log debug information
+      console.log("✅ Validation passed");
+      console.log("📋 Voucher Type:", voucherData.voucherType);
+      console.log("👥 Party Ledger:", voucherData.partyLedger);
+      console.log("📊 Ledger Entries:", voucherData.ledgerEntries);
+      console.log("📦 Inventory Entries:", voucherData.inventoryEntries);
+      console.log("💰 Ledger Balance:", validationResult.checks.ledgerBalance);
+      console.log("🔍 Generated XML:", xmlContent);
+
+      // Validation passed - send to Tally
       const result = await sendXmlToTally(xmlContent, {
         host: tallyHost,
         port: tallyPort,
@@ -374,6 +462,40 @@ export const XMLPreview: React.FC = () => {
           </div>
         </div>
 
+        {/* Ledger Configuration (for vouchers) */}
+        {(xmlType === "sales" || xmlType === "purchase") && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {xmlType === "sales" ? "Sales Ledger Name" : "Purchase Ledger Name"}
+              </label>
+              <input
+                type="text"
+                value={xmlType === "sales" ? salesLedgerName : purchaseLedgerName}
+                onChange={(e) =>
+                  xmlType === "sales"
+                    ? setSalesLedgerName(e.target.value)
+                    : setPurchaseLedgerName(e.target.value)
+                }
+                placeholder={xmlType === "sales" ? "e.g., Sales" : "e.g., Purchase"}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">GST Type</label>
+              <select
+                value={gstType}
+                onChange={(e) => setGstType(e.target.value as "intra-state" | "inter-state")}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="intra-state">Intra-state (CGST + SGST)</option>
+                <option value="inter-state">Inter-state (IGST)</option>
+              </select>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={generateXml}
           disabled={loading || selectedId === null}
@@ -396,6 +518,19 @@ export const XMLPreview: React.FC = () => {
           className="w-full h-96 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
+
+      {/* Validation Message */}
+      {validationMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <p className="text-red-800 text-sm font-medium mb-2">⚠️  Pre-Import Validation Failed</p>
+          <div className="text-xs text-red-700 font-mono whitespace-pre-wrap overflow-auto max-h-48">
+            {validationMessage}
+          </div>
+          <p className="text-red-700 text-xs mt-3">
+            Please fix the errors above before sending to Tally. Do not send malformed XML.
+          </p>
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -471,8 +606,18 @@ export const XMLPreview: React.FC = () => {
           >
             <p className="text-sm font-medium">{sendMessage}</p>
             {fullResponseDisplay && (
-              <div className="text-xs mt-3 bg-white text-gray-800 rounded p-3 border border-gray-200 font-mono overflow-auto max-h-96">
-                <pre className="whitespace-pre-wrap break-words text-xs">{fullResponseDisplay}</pre>
+              <div className="mt-3">
+                <button
+                  onClick={() => setShowDebugDetails(!showDebugDetails)}
+                  className="text-xs font-medium px-2 py-1 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition"
+                >
+                  {showDebugDetails ? "▼ Hide" : "▶ Show"} Debug Details
+                </button>
+                {showDebugDetails && (
+                  <div className="text-xs mt-3 bg-white text-gray-800 rounded p-3 border border-gray-200 font-mono overflow-auto max-h-96">
+                    <pre className="whitespace-pre-wrap break-words text-xs">{fullResponseDisplay}</pre>
+                  </div>
+                )}
               </div>
             )}
           </div>
