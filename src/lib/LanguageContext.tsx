@@ -11,95 +11,230 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Pure dynamic syllable-based transliteration - no hardcoded dictionary needed
-// Maps consonant+vowel pairs to proper Kannada syllables
+// ============================================================================
+// EXCEPTION DICTIONARY - Common Indian names and words with perfect Kannada
+// ============================================================================
+const kannada_exceptions: Record<string, string> = {
+  // Common -esh names (gods/heroes)
+  "ramesh": "ರಮೇಶ್",
+  "suresh": "ಸುರೇಶ್",
+  "mahesh": "ಮಹೇಶ್",
+  "ganesh": "ಗಣೇಶ್",
+  "rajesh": "ರಾಜೇಶ್",
+  "naresh": "ನರೇಶ್",
+  "nitesh": "ನಿತೇಶ್",
+  "vikram": "ವಿಕ್ರಮ್",
+  "prakash": "ಪ್ರಕಾಶ್",
+  "santosh": "ಸಂತೋಷ್",
+  "ashok": "ಅಶೋಕ್",
+  "ashish": "ಅಶಿಷ್",
+  "deepak": "ದೀಪಕ್",
+  "anand": "ಆನಂದ",
+
+  // Common surnames
+  "patil": "ಪಾಟೀಲ್",
+  "kumar": "ಕುಮಾರ್",
+  "sharma": "ಶರ್ಮ",
+  "singh": "ಸಿಂಗ್",
+  "verma": "ವರ್ಮ",
+  "gupta": "ಗುಪ್ತ",
+  "reddy": "ರೆಡ್ಡಿ",
+  "rao": "ರಾವ್",
+  "patel": "ಪಟೇಲ್",
+  "desai": "ದೇಸಾಯಿ",
+  "joshi": "ಜೋಶಿ",
+  "nair": "ನಾಯರ್",
+  "iyer": "ಅಯ್ಯರ್",
+  "kulkarni": "ಕುಲ್ಕರ್ಣಿ",
+  "pillai": "ಪಿಲ್ಲೈ",
+  "menon": "ಮೆನೋನ್",
+
+  // Common names
+  "shiva": "ಶಿವ",
+  "basaveshwar": "ಬಸವೇಶ್ವರ",
+  "arjun": "ಅರ್ಜುನ",
+  "karna": "ಕರ್ಣ",
+  "bhima": "ಭೀಮ",
+  "yudhishthir": "ಯುಧಿಷ್ಠಿರ",
+  "krishna": "ಕೃಷ್ಣ",
+  "indra": "ಇಂದ್ರ",
+
+  // Female names
+  "priya": "ಪ್ರಿಯ",
+  "divya": "ದಿವ್ಯ",
+  "sneha": "ಸ್ನೇಹ",
+  "pooja": "ಪೂಜ",
+  "neha": "ನೇಹ",
+  "seema": "ಸೀಮ",
+
+  // Cities/Places
+  "bengaluru": "ಬೆಂಗಳೂರು",
+  "bangalore": "ಬೆಂಗಳೂರು",
+  "karnataka": "ಕರ್ನಾಟಕ",
+  "mysore": "ಮೈಸೂರು",
+  "pune": "ಪುಣೆ",
+  "mumbai": "ಮುಂಬೈ",
+  "delhi": "ದೆಹಲಿ",
+  "hyderabad": "ಹೈದರಾಬಾದ",
+  "chennai": "ಚೆನ್ನೈ",
+  "kolkata": "ಕೋಲ್ಕತ್ತ",
+  "goa": "ಗೋವ",
+  "indore": "ಇಂದೌರ",
+  "aland": "ಅಲಂದ",
+
+  // Agro-related (farmer terms)
+  "paddy": "ಧಾನ್ಯ",
+  "rice": "ಅಕ್ಕಿ",
+  "wheat": "ಗೋಧಿ",
+  "sugarcane": "ಕಿವಿ",
+  "cotton": "ಹೊಲ",
+
+  // Common business terms
+  "traders": "ವ್ಯಾಪಾರಿ",
+  "company": "ಕಂಪನಿ",
+  "enterprise": "ಸಂಸ್ಥೆ",
+};
+
+// ============================================================================
+// ADVANCED SYLLABLE MAPPING - Improved for better transliteration
+// ============================================================================
 const syllableMap: Record<string, string> = {
-  // Consonant + vowel combinations (most common)
-  // Ka group
-  "ka": "ಕ", "ki": "ಕಿ", "ku": "ಕು", "ke": "ಕೆ", "ko": "ಕೋ", "kaa": "ಕಾ", "kee": "ಕೀ", "koo": "ಕೂ",
-  "kha": "ಖ", "khi": "ಖಿ", "khu": "ಖು", "khe": "ಖೆ", "kho": "ಖೋ", "khaa": "ಖಾ", "khee": "ಖೀ", "khoo": "ಖೂ",
-  
-  // Ga group
-  "ga": "ಗ", "gi": "ಗಿ", "gu": "ಗು", "ge": "ಗೆ", "go": "ಗೋ", "gaa": "ಗಾ", "gee": "ಗೀ", "goo": "ಗೂ",
-  "gha": "ಘ", "ghi": "ಘಿ", "ghu": "ಘು", "ghe": "ಘೆ", "gho": "ಘೋ", "ghaa": "ಘಾ", "ghee": "ಘೀ", "ghoo": "ಘೂ",
-  
-  // Cha group
-  "cha": "ಚ", "chi": "ಚಿ", "chu": "ಚು", "che": "ಚೆ", "cho": "ಚೋ", "chaa": "ಚಾ", "chee": "ಚೀ", "choo": "ಚೂ",
+  // === VOWELS ===
+  "a": "ಅ", "aa": "ಆ", 
+  "e": "ೆ", "ee": "ೀ", "ea": "ಿ",
+  "i": "ಿ", "ii": "ೀ",
+  "o": "ೋ", "oo": "ೂ",
+  "u": "ು", "uu": "ೂ",
+  "ai": "ೈ", "au": "ೌ",
+
+  // === KA GROUP ===
+  "ka": "ಕ", "kaa": "ಕಾ", "ki": "ಕಿ", "kee": "ಕೀ", "ku": "ಕು", "koo": "ಕೂ", "ke": "ಕೆ", "ko": "ಕೋ",
+  "kha": "ಖ", "khaa": "ಖಾ", "khi": "ಖಿ", "khee": "ಖೀ", "khu": "ಖು", "khoo": "ಖೂ", "khe": "ಖೆ", "kho": "ಖೋ",
+
+  // === GA GROUP ===
+  "ga": "ಗ", "gaa": "ಗಾ", "gi": "ಗಿ", "gee": "ಗೀ", "gu": "ಗು", "goo": "ಗೂ", "ge": "ಗೆ", "go": "ಗೋ",
+  "gha": "ಘ", "ghaa": "ಘಾ", "ghi": "ಘಿ", "ghee": "ಘೀ", "ghu": "ಘು", "ghoo": "ಘೂ", "ghe": "ಘೆ", "gho": "ಘೋ",
+
+  // === CHA GROUP ===
+  "cha": "ಚ", "chaa": "ಚಾ", "chi": "ಚಿ", "chee": "ಚೀ", "chu": "ಚು", "choo": "ಚೂ", "che": "ಚೆ", "cho": "ಚೋ",
   "chia": "ಚಿ", "chya": "ಚ್ಯ",
-  
-  // Ja group
-  "ja": "ಜ", "ji": "ಜಿ", "ju": "ಜು", "je": "ಜೆ", "jo": "ಜೋ", "jaa": "ಜಾ", "jee": "ಜೀ", "joo": "ಜೂ",
-  "jha": "ಝ", "jhi": "ಝಿ", "jhu": "ಝು", "jhe": "ಝೆ", "jho": "ಝೋ",
-  
-  // Ta group (dental)
-  "ta": "ತ", "ti": "ತಿ", "tu": "ತು", "te": "ತೆ", "to": "ತೋ", "taa": "ತಾ", "tee": "ತೀ", "too": "ತೂ",
-  "tha": "ಥ", "thi": "ಥಿ", "thu": "ಥು", "the": "ಥೆ", "tho": "ಥೋ", "thaa": "ಥಾ", "thee": "ಥೀ", "thoo": "ಥೂ",
-  
-  // Da group
-  "da": "ದ", "di": "ದಿ", "du": "ದು", "de": "ದೆ", "do": "ದೋ", "daa": "ದಾ", "dee": "ದೀ", "doo": "ದೂ",
-  "dha": "ಧ", "dhi": "ಧಿ", "dhu": "ಧು", "dhe": "ಧೆ", "dho": "ಧೋ", "dhaa": "ಧಾ", "dhee": "ಧೀ", "dhoo": "ಧೂ",
+
+  // === JA GROUP ===
+  "ja": "ಜ", "jaa": "ಜಾ", "ji": "ಜಿ", "jee": "ಜೀ", "ju": "ಜು", "joo": "ಜೂ", "je": "ಜೆ", "jo": "ಜೋ",
+  "jha": "ಝ", "jhaa": "ಝಾ", "jhi": "ಝಿ", "jhee": "ಝೀ", "jhu": "ಝು", "jhoo": "ಝೂ", "jhe": "ಝೆ", "jho": "ಝೋ",
+
+  // === TA GROUP (dental) ===
+  "ta": "ತ", "taa": "ತಾ", "ti": "ತಿ", "tee": "ತೀ", "tu": "ತು", "too": "ತೂ", "te": "ತೆ", "to": "ತೋ",
+  "tha": "ಥ", "thaa": "ಥಾ", "thi": "ಥಿ", "thee": "ಥೀ", "thu": "ಥು", "thoo": "ಥೂ", "the": "ಥೆ", "tho": "ಥೋ",
+
+  // === DA GROUP ===
+  "da": "ದ", "daa": "ದಾ", "di": "ದಿ", "dee": "ದೀ", "du": "ದು", "doo": "ದೂ", "de": "ದೆ", "do": "ದೋ",
+  "dha": "ಧ", "dhaa": "ಧಾ", "dhi": "ಧಿ", "dhee": "ಧೀ", "dhu": "ಧು", "dhoo": "ಧೂ", "dhe": "ಧೆ", "dho": "ಧೋ",
   "dya": "ದ್ಯ",
-  
-  // Na group
-  "na": "ನ", "ni": "ನಿ", "nu": "ನು", "ne": "ನೆ", "no": "ನೋ", "naa": "ನಾ", "nee": "ನೀ", "noo": "ನೂ",
-  
-  // Pa group
-  "pa": "ಪ", "pi": "ಪಿ", "pu": "ಪು", "pe": "ಪೆ", "po": "ಪೋ", "paa": "ಪಾ", "pee": "ಪೀ", "poo": "ಪೂ",
-  "pha": "ಫ", "phi": "ಫಿ", "phu": "ಫು", "phe": "ಫೆ", "pho": "ಫೋ", "phaa": "ಫಾ", "phee": "ಫೀ", "phoo": "ಫೂ",
-  "pra": "ಪ್ರ", "pri": "ಪ್ರಿ", "pru": "ಪ್ರು", "pre": "ಪ್ರೆ", "pro": "ಪ್ರೋ", "praa": "ಪ್ರಾ",
-  
-  // Ba group
-  "ba": "ಬ", "bi": "ಬಿ", "bu": "ಬು", "be": "ಬೆ", "bo": "ಬೋ", "baa": "ಬಾ", "bee": "ಬೀ", "boo": "ಬೂ",
-  "bha": "ಭ", "bhi": "ಭಿ", "bhu": "ಭು", "bhe": "ಭೆ", "bho": "ಭೋ", "bhaa": "ಭಾ", "bhee": "ಭೀ", "bhoo": "ಭೂ",
-  "bra": "ಬ್ರ", "bri": "ಬ್ರಿ", "bru": "ಬ್ರು", "bre": "ಬ್ರೆ", "bro": "ಬ್ರೋ", "braa": "ಬ್ರಾ",
-  
-  // Ma group
-  "ma": "ಮ", "mi": "ಮಿ", "mu": "ಮು", "me": "ಮೆ", "mo": "ಮೋ", "maa": "ಮಾ", "mee": "ಮೀ", "moo": "ಮೂ",
-  
-  // Ya group
-  "ya": "ಯ", "yi": "ಯಿ", "yu": "ಯು", "ye": "ಯೆ", "yo": "ಯೋ", "yaa": "ಯಾ", "yee": "ಯೀ", "yoo": "ಯೂ",
-  
-  // Ra group
-  "ra": "ರ", "ri": "ರಿ", "ru": "ರು", "re": "ರೆ", "ro": "ರೋ", "raa": "ರಾ", "ree": "ರೀ", "roo": "ರೂ",
-  
-  // La group
-  "la": "ಲ", "li": "ಲಿ", "lu": "ಲು", "le": "ಲೆ", "lo": "ಲೋ", "laa": "ಲಾ", "lee": "ಲೀ", "loo": "ಲೂ",
-  
-  // Va group
-  "va": "ವ", "vi": "ವಿ", "vu": "ವು", "ve": "ವೆ", "vo": "ವೋ", "vaa": "ವಾ", "vee": "ವೀ", "voo": "ವೂ",
-  
-  // Sa group
-  "sa": "ಸ", "si": "ಸಿ", "su": "ಸು", "se": "ಸೆ", "so": "ಸೋ", "saa": "ಸಾ", "see": "ಸೀ", "soo": "ಸೂ",
-  "sha": "ಶ", "shi": "ಶಿ", "shu": "ಶು", "she": "ಶೆ", "sho": "ಶೋ", "shaa": "ಶಾ", "shee": "ಶೀ", "shoo": "ಶೂ",
-  "shra": "ಶ್ರ", "shri": "ಶ್ರಿ", "shru": "ಶ್ರು", "shre": "ಶ್ರೆ", "shro": "ಶ್ರೋ", "shraa": "ಶ್ರಾ",
+
+  // === NA GROUP ===
+  "na": "ನ", "naa": "ನಾ", "ni": "ನಿ", "nee": "ನೀ", "nu": "ನು", "noo": "ನೂ", "ne": "ನೆ", "no": "ನೋ",
+
+  // === PA GROUP ===
+  "pa": "ಪ", "paa": "ಪಾ", "pi": "ಪಿ", "pee": "ಪೀ", "pu": "ಪು", "poo": "ಪೂ", "pe": "ಪೆ", "po": "ಪೋ",
+  "pha": "ಫ", "phaa": "ಫಾ", "phi": "ಫಿ", "phee": "ಫೀ", "phu": "ಫು", "phoo": "ಫೂ", "phe": "ಫೆ", "pho": "ಫೋ",
+  "pra": "ಪ್ರ", "praa": "ಪ್ರಾ", "pri": "ಪ್ರಿ", "pree": "ಪ್ರೀ", "pru": "ಪ್ರು", "proo": "ಪ್ರೂ", "pre": "ಪ್ರೆ", "pro": "ಪ್ರೋ",
+
+  // === BA GROUP ===
+  "ba": "ಬ", "baa": "ಬಾ", "bi": "ಬಿ", "bee": "ಬೀ", "bu": "ಬು", "boo": "ಬೂ", "be": "ಬೆ", "bo": "ಬೋ",
+  "bha": "ಭ", "bhaa": "ಭಾ", "bhi": "ಭಿ", "bhee": "ಭೀ", "bhu": "ಭು", "bhoo": "ಭೂ", "bhe": "ಭೆ", "bho": "ಭೋ",
+  "bra": "ಬ್ರ", "braa": "ಬ್ರಾ", "bri": "ಬ್ರಿ", "bree": "ಬ್ರೀ", "bru": "ಬ್ರು", "broo": "ಬ್ರೂ", "bre": "ಬ್ರೆ", "bro": "ಬ್ರೋ",
+
+  // === MA GROUP ===
+  "ma": "ಮ", "maa": "ಮಾ", "mi": "ಮಿ", "mee": "ಮೀ", "mu": "ಮು", "moo": "ಮೂ", "me": "ಮೆ", "mo": "ಮೋ",
+
+  // === YA GROUP ===
+  "ya": "ಯ", "yaa": "ಯಾ", "yi": "ಯಿ", "yee": "ಯೀ", "yu": "ಯು", "yoo": "ಯೂ", "ye": "ಯೆ", "yo": "ಯೋ",
+
+  // === RA GROUP ===
+  "ra": "ರ", "raa": "ರಾ", "ri": "ರಿ", "ree": "ರೀ", "ru": "ರು", "roo": "ರೂ", "re": "ರೆ", "ro": "ರೋ",
+
+  // === LA GROUP ===
+  "la": "ಲ", "laa": "ಲಾ", "li": "ಲಿ", "lee": "ಲೀ", "lu": "ಲು", "loo": "ಲೂ", "le": "ಲೆ", "lo": "ಲೋ",
+
+  // === VA GROUP ===
+  "va": "ವ", "vaa": "ವಾ", "vi": "ವಿ", "vee": "ವೀ", "vu": "ವು", "voo": "ವೂ", "ve": "ವೆ", "vo": "ವೋ",
+
+  // === SA GROUP ===
+  "sa": "ಸ", "saa": "ಸಾ", "si": "ಸಿ", "see": "ಸೀ", "su": "ಸು", "soo": "ಸೂ", "se": "ಸೆ", "so": "ಸೋ",
+  "sha": "ಶ", "shaa": "ಶಾ", "shi": "ಶಿ", "shee": "ಶೀ", "shu": "ಶು", "shoo": "ಶೂ", "she": "ಶೆ", "sho": "ಶೋ",
+  "shra": "ಶ್ರ", "shraa": "ಶ್ರಾ", "shri": "ಶ್ರಿ", "shree": "ಶ್ರೀ", "shru": "ಶ್ರು", "shroo": "ಶ್ರೂ", "shre": "ಶ್ರೆ", "shro": "ಶ್ರೋ",
   "sma": "ಸ್ಮ", "smi": "ಸ್ಮಿ",
-  
-  // Ha group
-  "ha": "ಹ", "hi": "ಹಿ", "hu": "ಹು", "he": "ಹೆ", "ho": "ಹೋ", "haa": "ಹಾ", "hee": "ಹೀ", "hoo": "ಹೂ",
-  
-  // Standalone vowels
-  "a": "ಅ", "i": "ಇ", "u": "ಉ", "e": "ಎ", "o": "ಒ",
-  "aa": "ಆ", "ee": "ಈ", "oo": "ೂ", "ai": "ಐ", "au": "ಔ",
-  
-  // Common consonant clusters
+
+  // === HA GROUP ===
+  "ha": "ಹ", "haa": "ಹಾ", "hi": "ಹಿ", "hee": "ಹೀ", "hu": "ಹು", "hoo": "ಹೂ", "he": "ಹೆ", "ho": "ಹೋ",
+
+  // === STANDALONE CONSONANTS ===
+  "k": "ಕ", "kh": "ಖ", "g": "ಗ", "gh": "ಘ",
+  "c": "ಚ", "ch": "ಚ", "j": "ಜ", "jh": "ಝ",
+  "t": "ತ", "th": "ಥ", "d": "ದ", "dh": "ಧ",
+  "n": "ನ", "p": "ಪ", "ph": "ಫ", "b": "ಬ", "bh": "ಭ",
+  "m": "ಮ", "y": "ಯ", "r": "ರ", "l": "ಲ", "v": "ವ",
+  "s": "ಸ", "sh": "ಶ", "h": "ಹ",
+  "w": "ವ",
+
+  // === COMMON CLUSTERS ===
   "tr": "ತ್ರ", "dr": "ದ್ರ", "gr": "ಗ್ರ", "kr": "ಕ್ರ",
   "st": "ಸ್ಟ", "sp": "ಸ್ಪ", "sk": "ಸ್ಕ",
   "fr": "ಫ್ರ", "br": "ಬ್ರ", "pr": "ಪ್ರ",
-  "nd": "ಂದ", "ng": "ಂಗ", "nk": "ಂಕ",
+  "nd": "ಂದ", "ng": "ಂಗ", "nk": "ಂಕ", "nt": "ಂತ",
+  "ll": "ಲ್ಲ", "mm": "ಮ್ಮ", "nn": "ನ್ನ", "rr": "ರ್ರ",
+
+  // === SPECIAL ENDINGS (important for Indian names) ===
+  "esh": "ೇಶ್",
+  "ish": "ಿಶ್",
+  "ash": "ಾಶ್",
+  "osh": "ೋಶ್",
+  "ush": "ುಶ್",
+  "il": "ೀಲ್",
+  "al": "ಾಲ್",
+  "ar": "ಾರ್",
+  "ur": "ುರ್",
+  "er": "ೆರ್",
+  "or": "ೋರ್",
 };
 
-// Transliterate using syllable-based approach - completely dynamic
-const syllableTransliterate = (text: string): string => {
+// ============================================================================
+// IMPROVED TRANSLITERATION FUNCTION
+// ============================================================================
+
+/**
+ * Transliterate a single English word to Kannada
+ * Uses exception dictionary first, then applies syllable-based rules
+ */
+const transliterateWord = (word: string): string => {
+  if (!word || word.length === 0) return word;
+
+  const lowerWord = word.toLowerCase();
+
+  // Check exception dictionary first (perfect matches for common names)
+  if (kannada_exceptions[lowerWord]) {
+    return kannada_exceptions[lowerWord];
+  }
+
+  // Apply syllable-based transliteration with pattern matching
+  return syllableTransliterateWord(word);
+};
+
+/**
+ * Syllable-based transliteration with longest-match-first strategy
+ */
+const syllableTransliterateWord = (text: string): string => {
   if (!text || text.length === 0) return text;
-  
+
   let result = "";
   let i = 0;
-  
+
   while (i < text.length) {
     let found = false;
-    
-    // Try 4-character combinations first (like "shaa", "khaa")
-    if (i < text.length - 3) {
+
+    // Try 4-character combinations first (for endings like "shaa", "khaa")
+    if (i <= text.length - 4) {
       const fourChar = text.substring(i, i + 4).toLowerCase();
       if (syllableMap[fourChar]) {
         result += syllableMap[fourChar];
@@ -107,9 +242,9 @@ const syllableTransliterate = (text: string): string => {
         found = true;
       }
     }
-    
-    // Try 3-character combinations (like "tha", "kha", "sha", "bra", "pra", "shra")
-    if (!found && i < text.length - 2) {
+
+    // Try 3-character combinations
+    if (!found && i <= text.length - 3) {
       const threeChar = text.substring(i, i + 3).toLowerCase();
       if (syllableMap[threeChar]) {
         result += syllableMap[threeChar];
@@ -117,9 +252,9 @@ const syllableTransliterate = (text: string): string => {
         found = true;
       }
     }
-    
-    // Try 2-character combinations (like "ka", "ta", "ra", "na", "nd", "ng", "ai")
-    if (!found && i < text.length - 1) {
+
+    // Try 2-character combinations
+    if (!found && i <= text.length - 2) {
       const twoChar = text.substring(i, i + 2).toLowerCase();
       if (syllableMap[twoChar]) {
         result += syllableMap[twoChar];
@@ -127,22 +262,46 @@ const syllableTransliterate = (text: string): string => {
         found = true;
       }
     }
-    
+
     // Try 1-character match
     if (!found) {
       const oneChar = text[i].toLowerCase();
       if (syllableMap[oneChar]) {
         result += syllableMap[oneChar];
-      } else if (/[0-9\s\-.,']/.test(text[i])) {
-        result += text[i];  // Keep numbers, spaces, punctuation
+      } else if (/[0-9\s\-.,']()[]/.test(text[i])) {
+        // Keep numbers, spaces, punctuation, and brackets
+        result += text[i];
       } else {
-        result += text[i];  // Keep other characters as-is
+        // Unknown character - keep as-is
+        result += text[i];
       }
       i += 1;
     }
   }
-  
+
   return result;
+};
+
+/**
+ * Main transliterate function - handles full text with spaces
+ * Transliterates each word separately, preserves word boundaries
+ */
+const transliterateText = (text: string): string => {
+  if (!text || text.length === 0) return text;
+
+  // Split by spaces but preserve the spaces
+  const words = text.split(/(\s+)/);
+
+  return words
+    .map((word) => {
+      // If it's a space/whitespace, return as-is
+      if (/^\s+$/.test(word)) {
+        return word;
+      }
+      // Otherwise transliterate the word
+      return transliterateWord(word);
+    })
+    .join("");
 };
 
 // Offline Kannada translation mapping for common UI strings
@@ -238,8 +397,8 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         return text;
       }
 
-      // Use pure syllable-based transliteration (no hardcoded dictionary)
-      return syllableTransliterate(text);
+      // Use improved transliteration with exception dictionary + syllable rules
+      return transliterateText(text);
     },
     [language]
   );
