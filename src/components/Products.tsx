@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { addProduct, getProducts, getProductTypes, Product, ProductType } from "../lib/db";
+import { useLanguage } from "../lib/LanguageContext";
+import { translations } from "../lib/translations";
 
 export const Products: React.FC = () => {
+  const { translate } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     hsnCode: "",
@@ -33,7 +36,7 @@ export const Products: React.FC = () => {
       setProducts(prods);
     } catch (err) {
       console.error("Error loading data:", err);
-      setError("Failed to load data");
+      setError(translate(translations.failedToLoadData));
     }
   };
 
@@ -58,27 +61,27 @@ export const Products: React.FC = () => {
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      setError("Product name is required");
+      setError(translate(translations.productNameRequired));
       return;
     }
 
     if (!formData.unit.trim()) {
-      setError("Unit is required");
+      setError(translate("Unit is required"));
       return;
     }
 
     if (!formData.gstRate || isNaN(parseFloat(formData.gstRate))) {
-      setError("GST rate must be a number");
+      setError(translate("GST rate must be a number"));
       return;
     }
 
     if (!formData.sellingPrice || isNaN(parseFloat(formData.sellingPrice))) {
-      setError("Selling price (No.0) must be a number");
+      setError(translate("Selling price (No.0) must be a number"));
       return;
     }
 
     if (!formData.tallyPrice || isNaN(parseFloat(formData.tallyPrice))) {
-      setError("Tally price (No.1) must be a number");
+      setError(translate("Tally price (No.1) must be a number"));
       return;
     }
 
@@ -108,7 +111,7 @@ export const Products: React.FC = () => {
       await loadData();
     } catch (err) {
       console.error("Error saving product:", err);
-      setError("Failed to save product");
+      setError(translate(translations.failedToSaveProduct));
     } finally {
       setLoading(false);
     }
@@ -116,7 +119,7 @@ export const Products: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Products</h1>
+      <h1 className="text-3xl font-bold text-gray-800">{translate(translations.productName)}</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -126,12 +129,12 @@ export const Products: React.FC = () => {
 
       {/* Products Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Add New Product</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">{translate("Add New Product")}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Product Name
+              {translate(translations.productName)}
             </label>
             <input
               type="text"
@@ -139,13 +142,13 @@ export const Products: React.FC = () => {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter product name"
+              placeholder={translate("Enter product name")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              HSN Code
+              {translate(translations.hsnCode)}
             </label>
             <input
               type="text"
@@ -153,13 +156,13 @@ export const Products: React.FC = () => {
               value={formData.hsnCode}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter HSN code"
+              placeholder={translate("Enter HSN code")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Product Type
+              {translate(translations.productType)}
             </label>
             <select
               name="type"
@@ -167,7 +170,7 @@ export const Products: React.FC = () => {
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Select product type</option>
+              <option value="">{translate("Select product type")}</option>
               {productTypes.map((pt) => (
                 <option key={pt.id} value={pt.id}>
                   {pt.name}
@@ -178,7 +181,7 @@ export const Products: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              GST Rate (%)
+              {translate(translations.gstRate)}
             </label>
             <input
               type="number"
@@ -188,12 +191,12 @@ export const Products: React.FC = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="0.00"
             />
-            <p className="text-gray-500 text-xs mt-1">Auto-filled from product type</p>
+            <p className="text-gray-500 text-xs mt-1">{translate("Auto-filled from product type")}</p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Unit
+              {translate(translations.unit)}
             </label>
             <input
               type="text"
@@ -201,13 +204,13 @@ export const Products: React.FC = () => {
               value={formData.unit}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., Bag, Kg, L"
+              placeholder={translate("e.g., Bag, Kg, L")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Selling Price (No.0)
+              {translate(translations.sellingPrice)}
             </label>
             <input
               type="number"
@@ -221,7 +224,7 @@ export const Products: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tally Price (No.1)
+              {translate(translations.tallyPrice)}
             </label>
             <input
               type="number"
@@ -235,7 +238,7 @@ export const Products: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Expiry Date
+              {translate(translations.expiryDate)}
             </label>
             <input
               type="date"
@@ -252,30 +255,32 @@ export const Products: React.FC = () => {
           disabled={loading}
           className="mt-6 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
         >
-          {loading ? "Saving..." : "Save Product"}
+          {loading ? translate("Saving...") : translate("Save Product")}
         </button>
       </div>
 
       {/* Products List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Products ({products.length})</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            {translate(translations.productName)} ({products.length})
+          </h2>
         </div>
         {products.length === 0 ? (
           <div className="px-6 py-8 text-center text-gray-600 text-sm">
-            <p>No products added yet. Create your first product using the form above.</p>
+            <p>{translate("No products added yet. Create your first product using the form above.")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-100 border-b border-gray-300">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Name</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Type</th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-700">No.0 Price</th>
-                  <th className="px-4 py-3 text-right font-semibold text-gray-700">No.1 Price</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-700">GST %</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Unit</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">{translate(translations.name)}</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">{translate(translations.productType)}</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700">{translate(translations.no0SellingPrice)}</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700">{translate(translations.no1TallyPrice)}</th>
+                  <th className="px-4 py-3 text-center font-semibold text-gray-700">{translate(translations.gstRate)}</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">{translate(translations.unit)}</th>
                 </tr>
               </thead>
               <tbody>

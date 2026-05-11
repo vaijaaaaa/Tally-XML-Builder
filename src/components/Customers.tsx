@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { addCustomer, getCustomers, Customer } from "../lib/db";
+import { useLanguage } from "../lib/LanguageContext";
+import { translations } from "../lib/translations";
 
 export const Customers: React.FC = () => {
+  const { translate } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -24,7 +27,7 @@ export const Customers: React.FC = () => {
       setCustomers(data);
     } catch (err) {
       console.error("Error loading customers:", err);
-      setError("Failed to load customers");
+      setError(translate(translations.failedToLoadCustomers));
     }
   };
 
@@ -35,7 +38,7 @@ export const Customers: React.FC = () => {
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      setError("Customer name is required");
+      setError(translate(translations.customerNameRequired));
       return;
     }
 
@@ -47,7 +50,7 @@ export const Customers: React.FC = () => {
       await loadCustomers();
     } catch (err) {
       console.error("Error saving customer:", err);
-      setError("Failed to save customer");
+      setError(translate(translations.failedToSaveCustomer));
     } finally {
       setLoading(false);
     }
@@ -55,7 +58,7 @@ export const Customers: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Customers</h1>
+      <h1 className="text-3xl font-bold text-gray-800">{translate(translations.customers)}</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -65,12 +68,12 @@ export const Customers: React.FC = () => {
 
       {/* Customers Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Add New Customer</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">{translate(translations.addNewCustomer)}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Customer Name
+              {translate(translations.customerName)}
             </label>
             <input
               type="text"
@@ -78,13 +81,13 @@ export const Customers: React.FC = () => {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter customer name"
+              placeholder={translate(translations.enterCustomerName)}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Address
+              {translate(translations.address)}
             </label>
             <input
               type="text"
@@ -92,13 +95,13 @@ export const Customers: React.FC = () => {
               value={formData.address}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter address"
+              placeholder={translate(translations.enterAddress)}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              State
+              {translate(translations.state)}
             </label>
             <input
               type="text"
@@ -106,13 +109,13 @@ export const Customers: React.FC = () => {
               value={formData.state}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter state"
+              placeholder={translate("Enter state")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              GSTIN (Optional)
+              {translate(translations.gstin)} (Optional)
             </label>
             <input
               type="text"
@@ -120,7 +123,7 @@ export const Customers: React.FC = () => {
               value={formData.gstin}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter GSTIN"
+              placeholder={translate("Enter GSTIN")}
             />
           </div>
         </div>
@@ -130,27 +133,27 @@ export const Customers: React.FC = () => {
           disabled={loading}
           className="mt-6 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
         >
-          {loading ? "Saving..." : "Save Customer"}
+          {loading ? translate("Saving...") : translate("Save Customer")}
         </button>
       </div>
 
       {/* Customers List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Customers ({customers.length})</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">{translate(translations.customers)} ({customers.length})</h2>
         </div>
         {customers.length === 0 ? (
           <div className="px-6 py-8 text-center text-gray-600 text-sm">
-            <p>No customers added yet. Create your first customer using the form above.</p>
+            <p>{translate("No customers added yet. Create your first customer using the form above.")}</p>
           </div>
         ) : (
           <table className="w-full">
             <thead className="bg-gray-100 border-b border-gray-300">
               <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Address</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">State</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">GSTIN</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate(translations.name)}</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate(translations.address)}</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate(translations.state)}</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate(translations.gstin)}</th>
               </tr>
             </thead>
             <tbody>

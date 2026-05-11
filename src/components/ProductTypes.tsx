@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { addProductType, getProductTypes, ProductType } from "../lib/db";
+import { useLanguage } from "../lib/LanguageContext";
+import { translations } from "../lib/translations";
 
 export const ProductTypes: React.FC = () => {
+  const { translate } = useLanguage();
   const [formData, setFormData] = useState({
     typeName: "",
     gstRate: "",
@@ -22,7 +25,7 @@ export const ProductTypes: React.FC = () => {
       setProductTypes(data);
     } catch (err) {
       console.error("Error loading product types:", err);
-      setError("Failed to load product types");
+      setError(translate(translations.failedToLoadProductTypes));
     }
   };
 
@@ -33,12 +36,12 @@ export const ProductTypes: React.FC = () => {
 
   const handleSave = async () => {
     if (!formData.typeName.trim()) {
-      setError("Type name is required");
+      setError(translate(translations.typeNameRequired));
       return;
     }
 
     if (!formData.gstRate || isNaN(parseFloat(formData.gstRate))) {
-      setError("GST rate must be a number");
+      setError(translate(translations.gstRateRequired));
       return;
     }
 
@@ -53,7 +56,7 @@ export const ProductTypes: React.FC = () => {
       await loadProductTypes();
     } catch (err) {
       console.error("Error saving product type:", err);
-      setError("Failed to save product type. It may already exist.");
+      setError(translate(translations.failedToSaveProductType));
     } finally {
       setLoading(false);
     }
@@ -61,7 +64,7 @@ export const ProductTypes: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Product Types</h1>
+      <h1 className="text-3xl font-bold text-gray-800">{translate(translations.productTypes)}</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -71,10 +74,10 @@ export const ProductTypes: React.FC = () => {
 
       {/* All Types */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Product Types ({productTypes.length})</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">{translate(translations.productTypes)} ({productTypes.length})</h2>
         {productTypes.length === 0 ? (
           <div className="text-gray-600 text-sm">
-            <p>No product types found.</p>
+            <p>{translate(translations.noProductTypesFound)}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -83,7 +86,7 @@ export const ProductTypes: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-semibold text-gray-800">{type.name}</h3>
-                    <p className="text-gray-600 text-sm">GST: {type.gst_rate}%</p>
+                    <p className="text-gray-600 text-sm">{translate("GST")}: {type.gst_rate}%</p>
                   </div>
                 </div>
               </div>
@@ -94,12 +97,12 @@ export const ProductTypes: React.FC = () => {
 
       {/* Add New Type Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Add New Product Type</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">{translate(translations.addNewProductType)}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type Name
+              {translate(translations.typeName)}
             </label>
             <input
               type="text"
@@ -107,13 +110,13 @@ export const ProductTypes: React.FC = () => {
               value={formData.typeName}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter type name"
+              placeholder={translate("Enter type name")}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              GST Rate (%)
+              {translate(translations.gstRate)} (%)
             </label>
             <input
               type="number"
@@ -131,7 +134,7 @@ export const ProductTypes: React.FC = () => {
           disabled={loading}
           className="mt-6 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
         >
-          {loading ? "Saving..." : "Save Type"}
+          {loading ? translate("Saving...") : translate("Save Type")}
         </button>
       </div>
     </div>

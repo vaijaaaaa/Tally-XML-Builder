@@ -1,4 +1,8 @@
 import { escapeXml, formatDateForTally } from "../xml-builder";
+import {
+  buildSalesLedgerEntries,
+  validateLedgerBalance,
+} from "../voucher-builder";
 
 interface SalesVoucherInput {
   voucherDate: string;
@@ -17,18 +21,19 @@ interface SalesVoucherInput {
 }
 
 /**
- * Build Sales Voucher XML with proper accounting allocations
+ * Build Sales Voucher XML with proper accounting allocations and debit/credit signs
  * 
- * Amount signs for Sales:
- * - Party ledger (Customer): NEGATIVE (money received)
- * - Sales ledger (ACCOUNTINGALLOCATIONS): POSITIVE (income)
- * - Output GST: POSITIVE (liability)
+ * Ledger Entry Sign Convention for Sales:
+ * - Party (Customer/Receivable): POSITIVE amount, isDeemedPositive=false
+ * - Sales (Income): NEGATIVE amount, isDeemedPositive=true
+ * - Output GST: NEGATIVE amount, isDeemedPositive=true
  * 
- * Example for Sale of 1000 + 50 GST = 1050 total:
- * Party (Customer): -1050
- * Sales (Accounting Allocation): +1000
- * Output GST: +50
- * Total: 0 (balanced)
+ * Example: Sale of 1000 + 50 GST = 1050 total
+ * - Customer: +1050, isDeemedPositive=false
+ * - Sales: -1000, isDeemedPositive=true
+ * - Output CGST: -25, isDeemedPositive=true
+ * - Output SGST: -25, isDeemedPositive=true
+ * Total: 0 ✓
  * 
  * CRITICAL: Uses tallyPriceNo1 (No.1 price), NOT No.0 selling price
  */
@@ -70,9 +75,22 @@ export function buildSalesVoucherXml(input: SalesVoucherInput): string {
     throw new Error(`Invalid voucher date after formatting: "${formattedDate}"`);
   }
 
-  // Amount calculations for Sales:
-  // Customer ledger = negative total (money we receive from customer)
-  const customerAmount = -tallyTotalAmount;
+  // Build ledger entries with proper sign handling
+  const ledgerEntries = buildSalesLedgerEntries({
+    customerName,
+    salesLedgerName,
+    taxableAmount: tallyTaxableAmount,
+    totalAmount: tallyTotalAmount,
+    gstAmount,
+    gstType,
+    roundOffAmount,
+  });
+
+  // Validate ledger balance BEFORE generating XML
+  const balanceValidation = validateLedgerBalance(ledgerEntries);
+  if (!balanceValidation.balanced) {
+    throw new Error(balanceValidation.error || "Ledger entries do not balance");
+  }
 
   let xml = `          <VOUCHER VCHTYPE="Sales" ACTION="Create" OBJVIEW="Invoice Voucher View">
             <DATE>${formattedDate}</DATE>
@@ -80,13 +98,19 @@ export function buildSalesVoucherXml(input: SalesVoucherInput): string {
             <VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
             <PARTYLEDGERNAME>${escapeXml(customerName)}</PARTYLEDGERNAME>
             <PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>
-            <ISINVOICE>Yes</ISINVOICE>
-            <LEDGERENTRIES.LIST>
-              <LEDGERNAME>${escapeXml(customerName)}</LEDGERNAME>
-              <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-              <AMOUNT>${customerAmount}</AMOUNT>
-            </LEDGERENTRIES.LIST>
-            <ALLINVENTORYENTRIES.LIST>
+            <ISINVOICE>Yes</ISINVOICE>`;
+
+  // Add ledger entries (party, sales, GST)
+  for (const entry of ledgerEntries) {
+    xml += `\n            <LEDGERENTRIES.LIST>
+              <LEDGERNAME>${escapeXml(entry.name)}</LEDGERNAME>
+              <ISDEEMEDPOSITIVE>${entry.isDeemedPositive ? "Yes" : "No"}</ISDEEMEDPOSITIVE>
+              <AMOUNT>${entry.amount}</AMOUNT>
+            </LEDGERENTRIES.LIST>`;
+  }
+
+  // Add inventory entry with accounting allocation
+  xml += `\n            <ALLINVENTORYENTRIES.LIST>
               <STOCKITEMNAME>${escapeXml(productName)}</STOCKITEMNAME>
               <RATE>${tallyPriceNo1}/${escapeXml(unit)}</RATE>
               <ACTUALQTY>${qty} ${escapeXml(unit)}</ACTUALQTY>
@@ -94,45 +118,10 @@ export function buildSalesVoucherXml(input: SalesVoucherInput): string {
               <AMOUNT>${tallyTaxableAmount}</AMOUNT>
               <ACCOUNTINGALLOCATIONS.LIST>
                 <LEDGERNAME>${escapeXml(salesLedgerName)}</LEDGERNAME>
-                <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-                <AMOUNT>${tallyTaxableAmount}</AMOUNT>
+                <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+                <AMOUNT>-${tallyTaxableAmount}</AMOUNT>
               </ACCOUNTINGALLOCATIONS.LIST>
             </ALLINVENTORYENTRIES.LIST>`;
-
-  // Add GST ledger entries only if GST amount > 0
-  if (gstAmount > 0) {
-    if (gstType === "inter-state") {
-      // Inter-state: Single IGST entry
-      xml += `\n            <LEDGERENTRIES.LIST>
-              <LEDGERNAME>Output IGST</LEDGERNAME>
-              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-              <AMOUNT>${gstAmount}</AMOUNT>
-            </LEDGERENTRIES.LIST>`;
-    } else {
-      // Intra-state: Split between CGST and SGST (50/50)
-      const cgstAmount = gstAmount / 2;
-      const sgstAmount = gstAmount / 2;
-      xml += `\n            <LEDGERENTRIES.LIST>
-              <LEDGERNAME>Output CGST</LEDGERNAME>
-              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-              <AMOUNT>${cgstAmount}</AMOUNT>
-            </LEDGERENTRIES.LIST>
-            <LEDGERENTRIES.LIST>
-              <LEDGERNAME>Output SGST</LEDGERNAME>
-              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-              <AMOUNT>${sgstAmount}</AMOUNT>
-            </LEDGERENTRIES.LIST>`;
-    }
-  }
-
-  // Add round off ledger only if round off amount is non-zero
-  if (roundOffAmount && roundOffAmount !== 0) {
-    xml += `\n            <LEDGERENTRIES.LIST>
-              <LEDGERNAME>Round Off</LEDGERNAME>
-              <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-              <AMOUNT>${roundOffAmount}</AMOUNT>
-            </LEDGERENTRIES.LIST>`;
-  }
 
   xml += `\n          </VOUCHER>`;
 

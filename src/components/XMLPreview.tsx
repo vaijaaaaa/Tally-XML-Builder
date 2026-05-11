@@ -16,6 +16,8 @@ import {
   Sale,
   Purchase,
 } from "../lib/db";
+import { useLanguage } from "../lib/LanguageContext";
+import { translations } from "../lib/translations";
 import { buildMasterEnvelope, buildVoucherEnvelope } from "../tally/xml-builder";
 import { buildLedgerCreateXml } from "../tally/xml-templates/ledger-create";
 import { buildStockItemXml } from "../tally/xml-templates/stock-item";
@@ -28,6 +30,7 @@ import { validateVoucher, formatValidationError } from "../tally/voucher-validat
 type XmlType = "customer" | "supplier" | "product" | "sales" | "purchase";
 
 export const XMLPreview: React.FC = () => {
+  const { translate } = useLanguage();
   const [xmlType, setXmlType] = useState<XmlType>("customer");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [xmlContent, setXmlContent] = useState(
@@ -60,6 +63,7 @@ export const XMLPreview: React.FC = () => {
   const [salesLedgerName, setSalesLedgerName] = useState("Sales");
   const [purchaseLedgerName, setPurchaseLedgerName] = useState("Purchase");
   const [gstType, setGstType] = useState<"intra-state" | "inter-state">("intra-state");
+  const [voucherDateOverride, setVoucherDateOverride] = useState<string>("");
 
   // Validation state
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -99,6 +103,7 @@ export const XMLPreview: React.FC = () => {
   // Reset selected ID when XML type changes
   useEffect(() => {
     setSelectedId(null);
+    setVoucherDateOverride("");
     setXmlContent("<!-- Select an XML type and record to generate XML -->");
   }, [xmlType]);
 
@@ -153,8 +158,10 @@ export const XMLPreview: React.FC = () => {
 
         // For demo, use first item
         const item = saleItems[0];
+        // Use override date if provided, otherwise use database date, otherwise use today
+        const effectiveDate = voucherDateOverride || sale.voucher_date || new Date().toISOString().split("T")[0];
         bodyXml = buildSalesVoucherXml({
-          voucherDate: sale.voucher_date,
+          voucherDate: effectiveDate,
           customerName: sale.customer_name,
           salesLedgerName: salesLedgerName,
           productName: item.product_name,
@@ -177,8 +184,10 @@ export const XMLPreview: React.FC = () => {
 
         // For demo, use first item
         const item = purchaseItems[0];
+        // Use override date if provided, otherwise use database date, otherwise use today
+        const effectiveDate = voucherDateOverride || purchase.voucher_date || new Date().toISOString().split("T")[0];
         bodyXml = buildPurchaseVoucherXml({
-          voucherDate: purchase.voucher_date,
+          voucherDate: effectiveDate,
           supplierName: purchase.supplier_name,
           supplierInvoiceNumber: purchase.supplier_invoice_number || undefined,
           purchaseLedgerName: purchaseLedgerName,
@@ -417,7 +426,7 @@ export const XMLPreview: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">XML Preview</h1>
+      <h1 className="text-3xl font-bold text-gray-800">{translate("XML Preview")}</h1>
 
       {/* Error Message */}
       {error && (
@@ -428,31 +437,31 @@ export const XMLPreview: React.FC = () => {
 
       {/* XML Type Selector */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Generate XML</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">{translate("Generate XML")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">XML Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{translate("XML Type")}</label>
             <select
               value={xmlType}
               onChange={(e) => setXmlType(e.target.value as XmlType)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="customer">Customer Ledger</option>
-              <option value="supplier">Supplier Ledger</option>
-              <option value="product">Stock Item</option>
-              <option value="sales">Sales Voucher</option>
-              <option value="purchase">Purchase Voucher</option>
+              <option value="customer">{translate("Customer Ledger")}</option>
+              <option value="supplier">{translate("Supplier Ledger")}</option>
+              <option value="product">{translate("Stock Item")}</option>
+              <option value="sales">{translate("Sales Voucher")}</option>
+              <option value="purchase">{translate("Purchase Voucher")}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Record</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{translate("Select Record")}</label>
             <select
               value={selectedId || ""}
               onChange={(e) => setSelectedId(e.target.value ? Number(e.target.value) : null)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">-- Select {xmlType} --</option>
+              <option value="">{translate("-- Select")} {xmlType} --</option>
               {availableRecords.map((record) => (
                 <option key={record.id} value={record.id}>
                   {record.name}
@@ -464,10 +473,10 @@ export const XMLPreview: React.FC = () => {
 
         {/* Ledger Configuration (for vouchers) */}
         {(xmlType === "sales" || xmlType === "purchase") && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {xmlType === "sales" ? "Sales Ledger Name" : "Purchase Ledger Name"}
+                {xmlType === "sales" ? translate(translations.salesLedgerName) : translate(translations.purchaseLedgerName)}
               </label>
               <input
                 type="text"
@@ -477,21 +486,32 @@ export const XMLPreview: React.FC = () => {
                     ? setSalesLedgerName(e.target.value)
                     : setPurchaseLedgerName(e.target.value)
                 }
-                placeholder={xmlType === "sales" ? "e.g., Sales" : "e.g., Purchase"}
+                placeholder={xmlType === "sales" ? translate("e.g., Sales") : translate("e.g., Purchase")}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">GST Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{translate("GST Type")}</label>
               <select
                 value={gstType}
                 onChange={(e) => setGstType(e.target.value as "intra-state" | "inter-state")}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="intra-state">Intra-state (CGST + SGST)</option>
-                <option value="inter-state">Inter-state (IGST)</option>
+                <option value="intra-state">{translate("Intra-state (CGST + SGST)")}</option>
+                <option value="inter-state">{translate("Inter-state (IGST)")}</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{translate("Voucher Date (Override)")}</label>
+              <input
+                type="date"
+                value={voucherDateOverride}
+                onChange={(e) => setVoucherDateOverride(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">{translate("Defaults to record date or today")}</p>
             </div>
           </div>
         )}
@@ -501,17 +521,17 @@ export const XMLPreview: React.FC = () => {
           disabled={loading || selectedId === null}
           className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          Generate XML
+          {translate("Generate XML")}
         </button>
 
         {availableRecords.length === 0 && (
-          <p className="text-sm text-gray-600 mt-2">No {xmlType}s available. Create one first.</p>
+          <p className="text-sm text-gray-600 mt-2">{translate("No records available. Create one first.")}</p>
         )}
       </div>
 
       {/* XML Preview Area */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Tally XML Envelope</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">{translate("Tally XML Envelope")}</h2>
         <textarea
           value={xmlContent}
           readOnly
@@ -522,24 +542,24 @@ export const XMLPreview: React.FC = () => {
       {/* Validation Message */}
       {validationMessage && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-          <p className="text-red-800 text-sm font-medium mb-2">⚠️  Pre-Import Validation Failed</p>
+          <p className="text-red-800 text-sm font-medium mb-2">⚠️ {translate("Pre-Import Validation Failed")}</p>
           <div className="text-xs text-red-700 font-mono whitespace-pre-wrap overflow-auto max-h-48">
             {validationMessage}
           </div>
           <p className="text-red-700 text-xs mt-3">
-            Please fix the errors above before sending to Tally. Do not send malformed XML.
+            {translate("Please fix the errors above before sending to Tally. Do not send malformed XML.")}
           </p>
         </div>
       )}
 
       {/* Action Buttons */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Tally Connection</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">{translate("Tally Connection")}</h2>
 
         {/* Tally Settings */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tally Host</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{translate(translations.tallyHost)}</label>
             <input
               type="text"
               value={tallyHost}
@@ -548,7 +568,7 @@ export const XMLPreview: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Tally Port</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{translate(translations.tallyPort)}</label>
             <input
               type="text"
               value={tallyPort}
@@ -565,7 +585,7 @@ export const XMLPreview: React.FC = () => {
             disabled={connectionStatus === "checking"}
             className="px-6 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {connectionStatus === "checking" ? "Checking..." : "Check Tally Connection"}
+            {connectionStatus === "checking" ? translate("Checking...") : translate("Check Tally Connection")}
           </button>
 
           <button
@@ -573,7 +593,7 @@ export const XMLPreview: React.FC = () => {
             disabled={sendStatus === "sending" || !xmlContent || xmlContent.includes("Select an")}
             className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {sendStatus === "sending" ? "Sending..." : "Send to Tally"}
+            {sendStatus === "sending" ? translate("Sending...") : translate("Send to Tally")}
           </button>
         </div>
 
@@ -611,7 +631,7 @@ export const XMLPreview: React.FC = () => {
                   onClick={() => setShowDebugDetails(!showDebugDetails)}
                   className="text-xs font-medium px-2 py-1 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition"
                 >
-                  {showDebugDetails ? "▼ Hide" : "▶ Show"} Debug Details
+                  {showDebugDetails ? translate("▼ Hide") : translate("▶ Show")} {translate("Debug Details")}
                 </button>
                 {showDebugDetails && (
                   <div className="text-xs mt-3 bg-white text-gray-800 rounded p-3 border border-gray-200 font-mono overflow-auto max-h-96">
@@ -627,8 +647,7 @@ export const XMLPreview: React.FC = () => {
       {/* Info Card */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-blue-800 text-sm">
-          <strong>Note:</strong> This page generates Tally-compatible XML from saved data and sends it to TallyPrime.
-          Ensure TallyPrime is running on the specified host and port (default: localhost:9000).
+          <strong>{translate("Note")}:</strong> {translate("This page generates Tally-compatible XML from saved data and sends it to TallyPrime. Ensure TallyPrime is running on the specified host and port (default: localhost:9000).")}
         </p>
       </div>
     </div>

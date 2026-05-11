@@ -8,8 +8,11 @@ import {
   Product,
   Purchase as PurchaseType,
 } from "../lib/db";
+import { useLanguage } from "../lib/LanguageContext";
+import { translations } from "../lib/translations";
 
 export const Purchase: React.FC = () => {
+  const { translate } = useLanguage();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [purchases, setPurchases] = useState<PurchaseType[]>([]);
@@ -44,12 +47,12 @@ export const Purchase: React.FC = () => {
         setProducts(productsData);
         setPurchases(purchasesData);
       } catch (err) {
-        setError("Failed to load data: " + String(err));
+        setError(translate(translations.failedToLoadData) + " " + String(err));
       }
     };
 
     loadData();
-  }, []);
+  }, [translate]);
 
   // Calculate when quantity or buying price changes
   useEffect(() => {
@@ -85,7 +88,7 @@ export const Purchase: React.FC = () => {
 
   const handleSavePurchase = async () => {
     if (!formData.supplierId || !formData.productId || !formData.quantity || !formData.buyingPrice) {
-      setError("Please fill in all required fields");
+      setError(translate("Please fill in all required fields"));
       return;
     }
 
@@ -93,7 +96,7 @@ export const Purchase: React.FC = () => {
     const product = products.find((p) => p.id === Number(formData.productId));
 
     if (!supplier || !product) {
-      setError("Invalid supplier or product");
+      setError(translate("Invalid supplier or product"));
       return;
     }
 
@@ -132,7 +135,7 @@ export const Purchase: React.FC = () => {
       const updatedPurchases = await getPurchases();
       setPurchases(updatedPurchases);
     } catch (err) {
-      setError("Failed to save purchase: " + String(err));
+      setError(translate(translations.failedToSavePurchase) + " " + String(err));
     } finally {
       setLoading(false);
     }
@@ -140,7 +143,7 @@ export const Purchase: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Purchase</h1>
+      <h1 className="text-3xl font-bold text-gray-800">{translate(translations.purchase)}</h1>
 
       {/* Error Display */}
       {error && (
@@ -151,12 +154,12 @@ export const Purchase: React.FC = () => {
 
       {/* Purchase Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Create Purchase Voucher</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">{translate(translations.purchaseVoucher)}</h2>
 
         {suppliers.length === 0 || products.length === 0 ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-blue-800 text-sm">
-              ℹ️ Please create suppliers and products in the Admin section first.
+              ℹ️ {translate("Please create suppliers and products in the Admin section first.")}
             </p>
           </div>
         ) : (
@@ -164,7 +167,7 @@ export const Purchase: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier
+                  {translate(translations.supplier)}
                 </label>
                 <select
                   name="supplierId"
@@ -172,7 +175,7 @@ export const Purchase: React.FC = () => {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Select supplier</option>
+                  <option value="">{translate("Select supplier")}</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -183,7 +186,7 @@ export const Purchase: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier Invoice Number
+                  {translate(translations.invoiceNumber)}
                 </label>
                 <input
                   type="text"
@@ -191,13 +194,13 @@ export const Purchase: React.FC = () => {
                   value={formData.invoiceNumber}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Invoice number"
+                  placeholder={translate("Invoice number")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product
+                  {translate(translations.productName)}
                 </label>
                 <select
                   name="productId"
@@ -205,7 +208,7 @@ export const Purchase: React.FC = () => {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Select product</option>
+                  <option value="">{translate(translations.selectProduct)}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -216,7 +219,7 @@ export const Purchase: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
+                  {translate(translations.quantity)}
                 </label>
                 <input
                   type="number"
@@ -231,7 +234,7 @@ export const Purchase: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Buying Price
+                  {translate(translations.buyingPrice)}
                 </label>
                 <input
                   type="number"
@@ -246,7 +249,7 @@ export const Purchase: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Expiry Date
+                  {translate(translations.expiryDate)}
                 </label>
                 <input
                   type="date"
@@ -261,18 +264,18 @@ export const Purchase: React.FC = () => {
             {/* Calculation Preview */}
             {formData.productId && formData.quantity && formData.buyingPrice && (
               <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-800 mb-4">Calculation Preview</h3>
+                <h3 className="font-semibold text-gray-800 mb-4">{translate("Calculation Preview")}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-xs text-gray-600">Taxable Amount</p>
+                    <p className="text-xs text-gray-600">{translate(translations.taxableAmount)}</p>
                     <p className="text-lg font-bold text-emerald-600">₹{calculations.taxableAmount.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">GST Amount</p>
+                    <p className="text-xs text-gray-600">{translate(translations.gstAmount)}</p>
                     <p className="text-lg font-bold text-amber-600">₹{calculations.gstAmount.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Total Amount</p>
+                    <p className="text-xs text-gray-600">{translate(translations.totalAmount)}</p>
                     <p className="text-lg font-bold text-teal-600">₹{calculations.totalAmount.toFixed(2)}</p>
                   </div>
                 </div>
@@ -284,7 +287,7 @@ export const Purchase: React.FC = () => {
               disabled={loading}
               className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
             >
-              {loading ? "Saving..." : "Save Purchase"}
+              {loading ? translate("Saving...") : translate("Save Purchase")}
             </button>
           </>
         )}
@@ -293,23 +296,23 @@ export const Purchase: React.FC = () => {
       {/* Purchases Table */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Purchases ({purchases.length})
+          {translate(translations.purchase)} ({purchases.length})
         </h2>
 
         {purchases.length === 0 ? (
-          <p className="text-gray-600 text-sm">No purchases added yet. Create your first purchase using the form above.</p>
+          <p className="text-gray-600 text-sm">{translate("No purchases added yet. Create your first purchase using the form above.")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-300 bg-gray-50">
-                  <th className="text-left py-2 px-4">Date</th>
-                  <th className="text-left py-2 px-4">Supplier</th>
-                  <th className="text-left py-2 px-4">Invoice No</th>
-                  <th className="text-right py-2 px-4">Taxable Amount</th>
-                  <th className="text-right py-2 px-4">GST</th>
-                  <th className="text-right py-2 px-4">Grand Total</th>
-                  <th className="text-left py-2 px-4">Sync Status</th>
+                  <th className="text-left py-2 px-4">{translate(translations.date)}</th>
+                  <th className="text-left py-2 px-4">{translate(translations.supplier)}</th>
+                  <th className="text-left py-2 px-4">{translate(translations.invoiceNumber)}</th>
+                  <th className="text-right py-2 px-4">{translate(translations.taxableAmount)}</th>
+                  <th className="text-right py-2 px-4">{translate(translations.gstAmount)}</th>
+                  <th className="text-right py-2 px-4">{translate("Grand Total")}</th>
+                  <th className="text-left py-2 px-4">{translate(translations.status)}</th>
                 </tr>
               </thead>
               <tbody>

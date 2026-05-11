@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { getTallySyncLogs, TallySyncLog } from "../lib/db";
+import { useLanguage } from "../lib/LanguageContext";
+import { translations } from "../lib/translations";
 
 export const SyncLogs: React.FC = () => {
+  const { translate } = useLanguage();
   const [logs, setLogs] = useState<TallySyncLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +20,7 @@ export const SyncLogs: React.FC = () => {
       setLogs(logsData);
       setError(null);
     } catch (err) {
-      setError("Failed to load logs: " + (err instanceof Error ? err.message : String(err)));
+      setError(translate(translations.failedToLoadData) + " " + (err instanceof Error ? err.message : String(err)));
       console.error(err);
     } finally {
       setLoading(false);
@@ -42,16 +45,29 @@ export const SyncLogs: React.FC = () => {
     }
   };
 
+  const getStatusTranslation = (status: string) => {
+    switch (status) {
+      case "success":
+        return translate("Success");
+      case "failed":
+        return translate("Failed");
+      case "pending":
+        return translate("Pending");
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-800">Sync Logs</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{translate(translations.syncLogs)}</h1>
         <button
           onClick={loadLogs}
           disabled={loading}
           className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {loading ? "Refreshing..." : "Refresh"}
+          {loading ? translate("Refreshing...") : translate("Refresh")}
         </button>
       </div>
 
@@ -67,18 +83,18 @@ export const SyncLogs: React.FC = () => {
         <table className="w-full">
           <thead className="bg-gray-100 border-b border-gray-300">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Entity Type</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">XML Type</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Error</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate(translations.date)}</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate("Entity Type")}</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate("XML Type")}</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate(translations.status)}</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">{translate("Error")}</th>
             </tr>
           </thead>
           <tbody>
             {logs.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-6 py-8 text-center text-gray-600 text-sm">
-                  No sync logs yet. Send XML to Tally to see logs here.
+                  {translate("No sync logs yet. Send XML to Tally to see logs here.")}
                 </td>
               </tr>
             ) : (
@@ -93,7 +109,7 @@ export const SyncLogs: React.FC = () => {
                         log.status
                       )}`}
                     >
-                      {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
+                      {getStatusTranslation(log.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-red-600">

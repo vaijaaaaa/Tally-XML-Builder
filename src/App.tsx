@@ -11,6 +11,8 @@ import { XMLPreview } from "./components/XMLPreview";
 import { SyncLogs } from "./components/SyncLogs";
 import { Settings } from "./components/Settings";
 import { initDatabase } from "./lib/db";
+import { LanguageProvider, useLanguage } from "./lib/LanguageContext";
+import { translations } from "./lib/translations";
 
 type Page =
   | "dashboard"
@@ -24,10 +26,11 @@ type Page =
   | "sync-logs"
   | "settings";
 
-function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const { translate, toggleLanguage, language } = useLanguage();
 
   useEffect(() => {
     initDatabase()
@@ -43,9 +46,9 @@ function App() {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
-            <p className="text-gray-600 mb-4">Initializing database...</p>
+            <p className="text-gray-600 mb-4">{translate(translations.initializingDatabase)}</p>
             {dbError && (
-              <p className="text-red-600 text-sm">{dbError}</p>
+              <p className="text-red-600 text-sm">{translate(dbError)}</p>
             )}
           </div>
         </div>
@@ -78,140 +81,126 @@ function App() {
     }
   };
 
+  const navButtonClass = (page: Page) =>
+    `w-full text-left px-4 py-3 rounded-lg transition ${
+      currentPage === page
+        ? "bg-blue-600 text-white font-medium"
+        : "text-gray-300 hover:bg-gray-800"
+    }`;
+
+  const subNavButtonClass = (page: Page) =>
+    `w-full text-left px-4 py-2 rounded-lg transition ml-2 ${
+      currentPage === page
+        ? "bg-blue-600 text-white font-medium"
+        : "text-gray-400 hover:bg-gray-800"
+    }`;
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white overflow-y-auto">
+      <aside className="w-64 bg-gray-900 text-white overflow-y-auto flex flex-col">
         {/* App Title */}
         <div className="p-6 border-b border-gray-700">
-          <h1 className="text-xl font-bold">FarmStack Tally</h1>
-          <p className="text-xs text-gray-400 mt-1">Demo</p>
+          <h1 className="text-xl font-bold">{translate(translations.farmstackTally)}</h1>
+          <p className="text-xs text-gray-400 mt-1">{translate(translations.demo)}</p>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
           {/* Dashboard */}
           <button
             onClick={() => setCurrentPage("dashboard")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition ${
-              currentPage === "dashboard"
-                ? "bg-blue-600 text-white font-medium"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
+            className={navButtonClass("dashboard")}
           >
-            Dashboard
+            {translate(translations.dashboard)}
           </button>
 
           {/* Purchase */}
           <button
             onClick={() => setCurrentPage("purchase")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition ${
-              currentPage === "purchase"
-                ? "bg-blue-600 text-white font-medium"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
+            className={navButtonClass("purchase")}
           >
-            Purchase
+            {translate(translations.purchase)}
           </button>
 
           {/* Sales */}
           <button
             onClick={() => setCurrentPage("sales")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition ${
-              currentPage === "sales"
-                ? "bg-blue-600 text-white font-medium"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
+            className={navButtonClass("sales")}
           >
-            Sales
+            {translate(translations.sales)}
           </button>
 
           {/* Admin Section */}
           <div className="mt-6 mb-4">
             <p className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Admin
+              {translate(translations.admin)}
             </p>
             <button
               onClick={() => setCurrentPage("suppliers")}
-              className={`w-full text-left px-4 py-2 rounded-lg transition ml-2 ${
-                currentPage === "suppliers"
-                  ? "bg-blue-600 text-white font-medium"
-                  : "text-gray-400 hover:bg-gray-800"
-              }`}
+              className={subNavButtonClass("suppliers")}
             >
-              • Suppliers
+              • {translate(translations.suppliers)}
             </button>
             <button
               onClick={() => setCurrentPage("customers")}
-              className={`w-full text-left px-4 py-2 rounded-lg transition ml-2 ${
-                currentPage === "customers"
-                  ? "bg-blue-600 text-white font-medium"
-                  : "text-gray-400 hover:bg-gray-800"
-              }`}
+              className={subNavButtonClass("customers")}
             >
-              • Customers
+              • {translate(translations.customers)}
             </button>
             <button
               onClick={() => setCurrentPage("products")}
-              className={`w-full text-left px-4 py-2 rounded-lg transition ml-2 ${
-                currentPage === "products"
-                  ? "bg-blue-600 text-white font-medium"
-                  : "text-gray-400 hover:bg-gray-800"
-              }`}
+              className={subNavButtonClass("products")}
             >
-              • Products
+              • {translate(translations.products)}
             </button>
             <button
               onClick={() => setCurrentPage("product-types")}
-              className={`w-full text-left px-4 py-2 rounded-lg transition ml-2 ${
-                currentPage === "product-types"
-                  ? "bg-blue-600 text-white font-medium"
-                  : "text-gray-400 hover:bg-gray-800"
-              }`}
+              className={subNavButtonClass("product-types")}
             >
-              • Product Types
+              • {translate(translations.productTypes)}
             </button>
           </div>
 
           {/* Tally Sync Section */}
           <div className="mt-6 mb-4">
             <p className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              Tally Sync
+              {translate(translations.tallySync)}
             </p>
             <button
               onClick={() => setCurrentPage("xml-preview")}
-              className={`w-full text-left px-4 py-2 rounded-lg transition ml-2 ${
-                currentPage === "xml-preview"
-                  ? "bg-blue-600 text-white font-medium"
-                  : "text-gray-400 hover:bg-gray-800"
-              }`}
+              className={subNavButtonClass("xml-preview")}
             >
-              • XML Preview
+              • {translate(translations.xmlPreview)}
             </button>
             <button
               onClick={() => setCurrentPage("sync-logs")}
-              className={`w-full text-left px-4 py-2 rounded-lg transition ml-2 ${
-                currentPage === "sync-logs"
-                  ? "bg-blue-600 text-white font-medium"
-                  : "text-gray-400 hover:bg-gray-800"
-              }`}
+              className={subNavButtonClass("sync-logs")}
             >
-              • Sync Logs
+              • {translate(translations.syncLogs)}
             </button>
           </div>
 
           {/* Settings */}
           <button
             onClick={() => setCurrentPage("settings")}
-            className={`w-full text-left px-4 py-3 rounded-lg transition mt-6 ${
-              currentPage === "settings"
-                ? "bg-blue-600 text-white font-medium"
-                : "text-gray-300 hover:bg-gray-800"
-            }`}
+            className={navButtonClass("settings")}
           >
-            Settings
+            {translate(translations.settings)}
           </button>
         </nav>
+
+        {/* Language Toggle - Fixed at bottom */}
+        <div className="p-4 border-t border-gray-700 mt-auto">
+          <button
+            onClick={toggleLanguage}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition font-medium text-sm"
+            title="Toggle language"
+          >
+            <span className="text-lg">🌐</span>
+            <span>{language === "english" ? translate(translations.kannada) : translate(translations.english)}</span>
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -221,6 +210,14 @@ function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

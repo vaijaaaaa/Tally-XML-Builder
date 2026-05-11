@@ -8,8 +8,11 @@ import {
   Product,
   Sale,
 } from "../lib/db";
+import { useLanguage } from "../lib/LanguageContext";
+import { translations } from "../lib/translations";
 
 export const Sales: React.FC = () => {
+  const { translate } = useLanguage();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -42,12 +45,12 @@ export const Sales: React.FC = () => {
         setProducts(productsData);
         setSales(salesData);
       } catch (err) {
-        setError("Failed to load data: " + String(err));
+        setError(translate(translations.failedToLoadData) + " " + String(err));
       }
     };
 
     loadData();
-  }, []);
+  }, [translate]);
 
   // Calculate when quantity or product changes
   useEffect(() => {
@@ -85,7 +88,7 @@ export const Sales: React.FC = () => {
 
   const handleSaveSale = async () => {
     if (!formData.customerId || !formData.productId || !formData.quantity) {
-      setError("Please fill in all fields");
+      setError(translate(translations.selectAllFields));
       return;
     }
 
@@ -93,7 +96,7 @@ export const Sales: React.FC = () => {
     const product = products.find((p) => p.id === Number(formData.productId));
 
     if (!customer || !product) {
-      setError("Invalid customer or product");
+      setError(translate(translations.invalidCustomerProduct));
       return;
     }
 
@@ -128,7 +131,7 @@ export const Sales: React.FC = () => {
       const updatedSales = await getSales();
       setSales(updatedSales);
     } catch (err) {
-      setError("Failed to save sale: " + String(err));
+      setError(translate(translations.failedToSaveSale) + " " + String(err));
     } finally {
       setLoading(false);
     }
@@ -136,12 +139,12 @@ export const Sales: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-800">Sales</h1>
+      <h1 className="text-3xl font-bold text-gray-800">{translate(translations.sales)}</h1>
 
       {/* Info Card */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <p className="text-amber-800 text-sm">
-          <strong>Important:</strong> Tally XML will use No.1 price. No.0 is the actual selling price.
+          <strong>{translate("Important")}:</strong> {translate(translations.tallyXmlWillUseNo1)}
         </p>
       </div>
 
@@ -154,12 +157,12 @@ export const Sales: React.FC = () => {
 
       {/* Sales Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Create Sales Voucher</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">{translate(translations.createSalesVoucher)}</h2>
 
         {customers.length === 0 || products.length === 0 ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-blue-800 text-sm">
-              ℹ️ Please create customers and products in the Admin section first.
+              ℹ️ {translate(translations.pleaseCreateCustomersProducts)}
             </p>
           </div>
         ) : (
@@ -167,7 +170,7 @@ export const Sales: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Customer
+                  {translate(translations.customer)}
                 </label>
                 <select
                   name="customerId"
@@ -175,7 +178,7 @@ export const Sales: React.FC = () => {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Select customer</option>
+                  <option value="">{translate(translations.selectCustomer)}</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -186,7 +189,7 @@ export const Sales: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product
+                  {translate(translations.productName)}
                 </label>
                 <select
                   name="productId"
@@ -194,7 +197,7 @@ export const Sales: React.FC = () => {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Select product</option>
+                  <option value="">{translate(translations.selectProduct)}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -205,7 +208,7 @@ export const Sales: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quantity
+                  {translate(translations.quantity)}
                 </label>
                 <input
                   type="number"
@@ -222,22 +225,22 @@ export const Sales: React.FC = () => {
             {/* Calculation Preview */}
             {formData.productId && formData.quantity && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-semibold text-gray-800 mb-4">Calculation Preview</h3>
+                <h3 className="font-semibold text-gray-800 mb-4">{translate("Calculation Preview")}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-xs text-gray-600">Actual Amount (No.0)</p>
+                    <p className="text-xs text-gray-600">{translate(translations.no0SellingPrice)}</p>
                     <p className="text-lg font-bold text-blue-600">₹{calculations.actualAmount.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Tally Taxable (No.1)</p>
+                    <p className="text-xs text-gray-600">{translate(translations.no1TallyPrice)}</p>
                     <p className="text-lg font-bold text-indigo-600">₹{calculations.tallyTaxableAmount.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">GST Amount</p>
+                    <p className="text-xs text-gray-600">{translate(translations.gstAmount)}</p>
                     <p className="text-lg font-bold text-amber-600">₹{calculations.gstAmount.toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-600">Tally Total</p>
+                    <p className="text-xs text-gray-600">{translate("Tally Total")}</p>
                     <p className="text-lg font-bold text-green-600">₹{calculations.tallyTotal.toFixed(2)}</p>
                   </div>
                 </div>
@@ -249,7 +252,7 @@ export const Sales: React.FC = () => {
               disabled={loading}
               className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
             >
-              {loading ? "Saving..." : "Save Sale"}
+              {loading ? translate("Saving...") : translate("Save Sale")}
             </button>
           </>
         )}
@@ -258,23 +261,23 @@ export const Sales: React.FC = () => {
       {/* Sales Table */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Sales ({sales.length})
+          {translate(translations.sales)} ({sales.length})
         </h2>
 
         {sales.length === 0 ? (
-          <p className="text-gray-600 text-sm">No sales added yet. Create your first sale using the form above.</p>
+          <p className="text-gray-600 text-sm">{translate("No sales added yet. Create your first sale using the form above.")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-300 bg-gray-50">
-                  <th className="text-left py-2 px-4">Date</th>
-                  <th className="text-left py-2 px-4">Customer</th>
-                  <th className="text-right py-2 px-4">Actual Amount</th>
-                  <th className="text-right py-2 px-4">Tally Amount</th>
-                  <th className="text-right py-2 px-4">GST</th>
-                  <th className="text-right py-2 px-4">Grand Total</th>
-                  <th className="text-left py-2 px-4">Sync Status</th>
+                  <th className="text-left py-2 px-4">{translate(translations.date)}</th>
+                  <th className="text-left py-2 px-4">{translate(translations.customer)}</th>
+                  <th className="text-right py-2 px-4">{translate(translations.actualAmount)}</th>
+                  <th className="text-right py-2 px-4">{translate(translations.tallyTaxableAmount)}</th>
+                  <th className="text-right py-2 px-4">{translate(translations.gstAmount)}</th>
+                  <th className="text-right py-2 px-4">{translate("Grand Total")}</th>
+                  <th className="text-left py-2 px-4">{translate(translations.status)}</th>
                 </tr>
               </thead>
               <tbody>
