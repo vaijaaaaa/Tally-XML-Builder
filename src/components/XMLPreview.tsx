@@ -30,7 +30,7 @@ import { validateVoucher, formatValidationError } from "../tally/voucher-validat
 type XmlType = "customer" | "supplier" | "product" | "sales" | "purchase";
 
 export const XMLPreview: React.FC = () => {
-  const { translate } = useLanguage();
+  const { translate, transliterate } = useLanguage();
   const [xmlType, setXmlType] = useState<XmlType>("customer");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [xmlContent, setXmlContent] = useState(
@@ -402,20 +402,20 @@ export const XMLPreview: React.FC = () => {
   const getAvailableRecords = () => {
     switch (xmlType) {
       case "customer":
-        return customers.map((c) => ({ id: c.id, name: c.name }));
+        return customers.map((c) => ({ id: c.id, name: transliterate(c.name) }));
       case "supplier":
-        return suppliers.map((s) => ({ id: s.id, name: s.name }));
+        return suppliers.map((s) => ({ id: s.id, name: transliterate(s.name) }));
       case "product":
-        return products.map((p) => ({ id: p.id, name: p.name }));
+        return products.map((p) => ({ id: p.id, name: transliterate(p.name) }));
       case "sales":
         return sales.map((s) => ({
           id: s.id,
-          name: `${s.voucher_date} - ${s.customer_name}`,
+          name: `${s.voucher_date} - ${transliterate(s.customer_name)}`,
         }));
       case "purchase":
         return purchases.map((p) => ({
           id: p.id,
-          name: `${p.voucher_date} - ${p.supplier_name}`,
+          name: `${p.voucher_date} - ${transliterate(p.supplier_name)}`,
         }));
       default:
         return [];

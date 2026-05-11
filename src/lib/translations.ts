@@ -100,7 +100,6 @@ export const translations = {
   tallyPrice: "Tally Price",
   no0SellingPrice: "No.0 (Selling Price)",
   no1TallyPrice: "No.1 (Tally Price)",
-  addNewProduct: "Add New Product",
   productNameRequired: "Product name is required",
   unitRequired: "Unit is required",
   gstRateMustBeNumber: "GST rate must be a number",
@@ -111,7 +110,6 @@ export const translations = {
 
   // Product Types
   productType: "Product Type",
-  productTypes: "Product Types",
   typeName: "Type Name",
   addNewProductType: "Add New Product Type",
   typeNameRequired: "Type name is required",
@@ -142,13 +140,9 @@ export const translations = {
   note: "Note",
   settingsPlaceholder: "These settings are currently placeholders and will be saved to a database once the backend is implemented",
 
-  // XML Preview
-  xmlPreview: "XML Preview",
-  xmlType: "XML Type",
+  // XML Preview & Sync
   selectXmlType: "Select an XML type and record to generate XML",
   selectRecord: "Select record",
-  generateXml: "Generate XML",
-  sendToTally: "Send to Tally",
   preview: "Preview",
   testConnection: "Test Connection",
   connectionSuccess: "Connection Successful",
@@ -161,27 +155,19 @@ export const translations = {
   validationFailed: "Validation failed",
   salesLedgerName: "Sales Ledger Name",
   purchaseLedgerName: "Purchase Ledger Name",
-  gstType: "GST Type",
   intraState: "Intra-State",
   interState: "Inter-State",
   voucherDateOverride: "Voucher Date Override",
-  failedToLoadData: "Failed to load data",
   checking: "Checking...",
   sending: "Sending...",
   pleaseSelectSalesPurchase: "Please select a sales/purchase record",
-  refreshLogs: "Refresh",
   refreshing: "Refreshing...",
 
   // Sync Logs
-  syncLogs: "Sync Logs",
   tallyEventLogs: "Tally Sync Logs",
   dateTime: "Date/Time",
-  entityType: "Entity Type",
-  status: "Status",
   errorMessage: "Error Message",
   noSyncLogsYet: "No sync logs yet. Send XML to Tally to see logs here",
-  pending: "Pending",
-  failed: "Failed",
 
   // Messages & States
   initializingDatabase: "Initializing database...",

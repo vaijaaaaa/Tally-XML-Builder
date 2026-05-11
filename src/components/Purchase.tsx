@@ -12,7 +12,7 @@ import { useLanguage } from "../lib/LanguageContext";
 import { translations } from "../lib/translations";
 
 export const Purchase: React.FC = () => {
-  const { translate } = useLanguage();
+  const { translate, transliterate } = useLanguage();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [purchases, setPurchases] = useState<PurchaseType[]>([]);
@@ -178,7 +178,7 @@ export const Purchase: React.FC = () => {
                   <option value="">{translate("Select supplier")}</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name}
+                      {transliterate(s.name)}
                     </option>
                   ))}
                 </select>
@@ -211,7 +211,7 @@ export const Purchase: React.FC = () => {
                   <option value="">{translate(translations.selectProduct)}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {transliterate(p.name)}
                     </option>
                   ))}
                 </select>
@@ -319,7 +319,7 @@ export const Purchase: React.FC = () => {
                 {purchases.map((purchase) => (
                   <tr key={purchase.id} className="border-b border-gray-200 hover:bg-gray-50">
                     <td className="py-2 px-4">{new Date(purchase.voucher_date).toLocaleDateString()}</td>
-                    <td className="py-2 px-4">{purchase.supplier_name}</td>
+                    <td className="py-2 px-4">{transliterate(purchase.supplier_name)}</td>
                     <td className="py-2 px-4">{purchase.supplier_invoice_number || "-"}</td>
                     <td className="text-right py-2 px-4">₹{purchase.total_taxable_amount.toFixed(2)}</td>
                     <td className="text-right py-2 px-4">₹{purchase.total_gst_amount.toFixed(2)}</td>

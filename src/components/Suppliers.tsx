@@ -4,7 +4,7 @@ import { useLanguage } from "../lib/LanguageContext";
 import { translations } from "../lib/translations";
 
 export const Suppliers: React.FC = () => {
-  const { translate } = useLanguage();
+  const { translate, transliterate } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -159,9 +159,9 @@ export const Suppliers: React.FC = () => {
             <tbody>
               {suppliers.map((supplier) => (
                 <tr key={supplier.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-800">{supplier.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{supplier.address || "-"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{supplier.state || "-"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-800">{transliterate(supplier.name)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{transliterate(supplier.address) || "-"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{transliterate(supplier.state) || "-"}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{supplier.gstin || "-"}</td>
                 </tr>
               ))}

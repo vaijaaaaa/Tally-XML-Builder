@@ -4,7 +4,7 @@ import { useLanguage } from "../lib/LanguageContext";
 import { translations } from "../lib/translations";
 
 export const SyncLogs: React.FC = () => {
-  const { translate } = useLanguage();
+  const { translate, transliterate } = useLanguage();
   const [logs, setLogs] = useState<TallySyncLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,8 +101,8 @@ export const SyncLogs: React.FC = () => {
               logs.map((log) => (
                 <tr key={log.id} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm text-gray-800">{formatDate(log.created_at)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-800">{log.entity_type}</td>
-                  <td className="px-6 py-4 text-sm text-gray-800">{log.xml_type}</td>
+                  <td className="px-6 py-4 text-sm text-gray-800">{transliterate(log.entity_type)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-800">{transliterate(log.xml_type)}</td>
                   <td className="px-6 py-4 text-sm">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(

@@ -4,7 +4,7 @@ import { useLanguage } from "../lib/LanguageContext";
 import { translations } from "../lib/translations";
 
 export const Products: React.FC = () => {
-  const { translate } = useLanguage();
+  const { translate, transliterate } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     hsnCode: "",
@@ -286,12 +286,12 @@ export const Products: React.FC = () => {
               <tbody>
                 {products.map((product) => (
                   <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-800">{product.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{product.product_type_name || "-"}</td>
+                    <td className="px-4 py-3 text-gray-800">{transliterate(product.name)}</td>
+                    <td className="px-4 py-3 text-gray-600">{transliterate(product.product_type_name || "") || "-"}</td>
                     <td className="px-4 py-3 text-right text-gray-800 font-mono">₹{product.selling_price_no0.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right text-gray-800 font-mono">₹{product.tally_price_no1.toFixed(2)}</td>
                     <td className="px-4 py-3 text-center text-gray-800">{product.gst_rate}%</td>
-                    <td className="px-4 py-3 text-gray-600">{product.unit}</td>
+                    <td className="px-4 py-3 text-gray-600">{transliterate(product.unit)}</td>
                   </tr>
                 ))}
               </tbody>

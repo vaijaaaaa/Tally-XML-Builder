@@ -4,7 +4,7 @@ import { useLanguage } from "../lib/LanguageContext";
 import { translations } from "../lib/translations";
 
 export const Customers: React.FC = () => {
-  const { translate } = useLanguage();
+  const { translate, transliterate } = useLanguage();
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -159,9 +159,9 @@ export const Customers: React.FC = () => {
             <tbody>
               {customers.map((customer) => (
                 <tr key={customer.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-800">{customer.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{customer.address || "-"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{customer.state || "-"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-800">{transliterate(customer.name)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{transliterate(customer.address) || "-"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{transliterate(customer.state) || "-"}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{customer.gstin || "-"}</td>
                 </tr>
               ))}
