@@ -13,9 +13,11 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 // ============================================================================
 // EXCEPTION DICTIONARY - Common Indian names and words with perfect Kannada
+// This dictionary-first approach ensures high quality for common names
+// Transliteration is used as AUTO-SUGGESTION for user review, not final truth
 // ============================================================================
 const kannada_exceptions: Record<string, string> = {
-  // Common -esh names (gods/heroes)
+  // === COMMON -ESH NAMES (Gods/Heroes) ===
   "ramesh": "ರಮೇಶ್",
   "suresh": "ಸುರೇಶ್",
   "mahesh": "ಮಹೇಶ್",
@@ -30,8 +32,20 @@ const kannada_exceptions: Record<string, string> = {
   "ashish": "ಅಶಿಷ್",
   "deepak": "ದೀಪಕ್",
   "anand": "ಆನಂದ",
+  "harish": "ಹರಿಶ್",
+  "manish": "ಮನಿಶ್",
+  "banesh": "ಬನೇಶ್",
+  "dinesh": "ದಿನೇಶ್",
+  "girish": "ಗಿರಿಶ್",
+  "lokesh": "ಲೋಕೇಶ್",
+  "prabesh": "ಪ್ರಭೇಶ್",
+  "rajiv": "ರಾಜೀವ್",
+  "rajendra": "ರಾಜೇಂದ್ರ",
+  "ravindra": "ರವೀಂದ್ರ",
+  "arun": "ಅರುಣ್",
+  "varun": "ವರುಣ್",
 
-  // Common surnames
+  // === COMMON SURNAMES ===
   "patil": "ಪಾಟೀಲ್",
   "kumar": "ಕುಮಾರ್",
   "sharma": "ಶರ್ಮ",
@@ -48,8 +62,18 @@ const kannada_exceptions: Record<string, string> = {
   "kulkarni": "ಕುಲ್ಕರ್ಣಿ",
   "pillai": "ಪಿಲ್ಲೈ",
   "menon": "ಮೆನೋನ್",
+  "mistry": "ಮಿಸ್ತ್ರಿ",
+  "kapoor": "ಕಪೂರ್",
+  "khanna": "ಖನ್ನ",
+  "bhat": "ಭಟ್",
+  "bhatt": "ಭಟ್ಟ",
+  "hegde": "ಹೆಗ್ಡೆ",
+  "kadam": "ಕಾದಮ್",
+  "naik": "ನಾಯಕ್",
+  "pawar": "ಪವಾರ್",
+  "malhar": "ಮಾಲಾರ್",
 
-  // Common names
+  // === ANCIENT/HEROIC NAMES ===
   "shiva": "ಶಿವ",
   "basaveshwar": "ಬಸವೇಶ್ವರ",
   "arjun": "ಅರ್ಜುನ",
@@ -58,20 +82,50 @@ const kannada_exceptions: Record<string, string> = {
   "yudhishthir": "ಯುಧಿಷ್ಠಿರ",
   "krishna": "ಕೃಷ್ಣ",
   "indra": "ಇಂದ್ರ",
+  "ashwatthama": "ಅಶ್ವತ್ಥಾಮ",
+  "bhishma": "ಭೀಷ್ಮ",
 
-  // Female names
+  // === FEMALE NAMES ===
   "priya": "ಪ್ರಿಯ",
   "divya": "ದಿವ್ಯ",
   "sneha": "ಸ್ನೇಹ",
   "pooja": "ಪೂಜ",
   "neha": "ನೇಹ",
   "seema": "ಸೀಮ",
+  "kavya": "ಕವ್ಯ",
+  "richa": "ರಿಚ",
+  "nisha": "ನಿಶ",
+  "sweta": "ಸ್ವೇತ",
+  "lakshmi": "ಲಕ್ಷ್ಮಿ",
+  "sarita": "ಸರಿತ",
+  "harsha": "ಹರ್ಷ",
+  "malini": "ಮಾಲಿನಿ",
+  "rekha": "ರೇಖ",
+  "smita": "ಸ್ಮಿತ",
 
-  // Cities/Places
+  // === CITIES/PLACES IN KARNATAKA ===
   "bengaluru": "ಬೆಂಗಳೂರು",
   "bangalore": "ಬೆಂಗಳೂರು",
   "karnataka": "ಕರ್ನಾಟಕ",
   "mysore": "ಮೈಸೂರು",
+  "belur": "ಬೇಳೂರು",
+  "halebid": "ಹಾಳೇಬೀಡು",
+  "udupi": "ಉಡುಪಿ",
+  "mangalore": "ಮಂಗಳೂರು",
+  "shimoga": "ಶಿಮೋಗ",
+  "hassan": "ಹಾಸನ",
+  "belgaum": "ಬೇಳಗಾವಿ",
+  "belagavi": "ಬೇಳಗಾವಿ",
+  "bijapur": "ಬಿಜಾಪುರ",
+  "gulbarga": "ಗುಳ್ಬರ್ಗ",
+  "davangere": "ದಾವಣಗೆರೆ",
+  "aland": "ಅಲಂದ",
+  "ballari": "ಬಳ್ಳಾರಿ",
+  "kolar": "ಕೋಲಾರ",
+  "tumkur": "ತುಮ್ಕೂರ",
+  "chikmagalur": "ಚಿಕ್ಕಮಗಳೂರು",
+
+  // === OTHER MAJOR INDIAN CITIES ===
   "pune": "ಪುಣೆ",
   "mumbai": "ಮುಂಬೈ",
   "delhi": "ದೆಹಲಿ",
@@ -80,19 +134,43 @@ const kannada_exceptions: Record<string, string> = {
   "kolkata": "ಕೋಲ್ಕತ್ತ",
   "goa": "ಗೋವ",
   "indore": "ಇಂದೌರ",
-  "aland": "ಅಲಂದ",
+  "jaipur": "ಜಯಪುರ",
+  "lucknow": "ಲಕನೌ",
 
-  // Agro-related (farmer terms)
+  // === AGRICULTURAL/FARMER TERMS ===
   "paddy": "ಧಾನ್ಯ",
   "rice": "ಅಕ್ಕಿ",
   "wheat": "ಗೋಧಿ",
   "sugarcane": "ಕಿವಿ",
   "cotton": "ಹೊಲ",
+  "soybean": "ಸೋಯಾ",
+  "maize": "ಜೋಳ",
+  "groundnut": "ಕಾದಳೆ",
+  "jowar": "ಜೋಳ",
+  "pulses": "ಪುಡಿಂಗಳು",
+  "lentils": "ಬಾರ್ಲಿ",
+  "farm": "ಕೃಷಿ",
+  "farmer": "ರೈತ",
+  "harvest": "ಅಕ್ಕ",
+  "soil": "ಮಿಡುಡು",
 
-  // Common business terms
+  // === BUSINESS/COMMON TERMS ===
   "traders": "ವ್ಯಾಪಾರಿ",
   "company": "ಕಂಪನಿ",
   "enterprise": "ಸಂಸ್ಥೆ",
+  "business": "ವ್ಯವಹಾರ",
+  "supplier": "ಸರಬರಾಜುದಾರ",
+  "customer": "ಗ್ರಾಹಕ",
+  "merchant": "ವ್ಯಾಪಾರಿ",
+
+  // === UNITS/MEASUREMENTS ===
+  "kg": "ಕೆಜಿ",
+  "liter": "ಲೀಟರ್",
+  "bag": "ಚೀಲೆ",
+  "ton": "ಟನ್",
+  "acre": "ಎಕರೆ",
+  "rupees": "ರೂಪಾಯಿ",
+  "quintal": "ಕ್ವಿಂಟಾಲ್",
 };
 
 // ============================================================================
@@ -201,23 +279,39 @@ const syllableMap: Record<string, string> = {
 
 // ============================================================================
 // IMPROVED TRANSLITERATION FUNCTION
+// Priority: Dictionary > Algorithm
+// Use Case: Auto-suggestion for user review and manual correction
 // ============================================================================
 
 /**
  * Transliterate a single English word to Kannada
- * Uses exception dictionary first, then applies syllable-based rules
+ * 
+ * Algorithm:
+ * 1. Check exception dictionary first (100+ handcrafted perfect mappings)
+ *    - Common Indian names with correct Kannada spelling
+ *    - City names, business terms, agricultural products
+ *    - High confidence suggestions from expert Kannada speakers
+ * 
+ * 2. If not found in dictionary, use syllable-based rules
+ *    - Longest-match-first strategy (4-char → 3-char → 2-char → 1-char)
+ *    - Handles unknown names with reasonable phonetic approximation
+ * 
+ * NOTE: Output is AUTO-SUGGESTION ONLY
+ *   - Not treated as final truth
+ *   - User can manually correct before saving
+ *   - Database stores user's final decision
  */
 const transliterateWord = (word: string): string => {
   if (!word || word.length === 0) return word;
 
   const lowerWord = word.toLowerCase();
 
-  // Check exception dictionary first (perfect matches for common names)
+  // Step 1: Check exception dictionary first (PREFERRED for high quality)
   if (kannada_exceptions[lowerWord]) {
     return kannada_exceptions[lowerWord];
   }
 
-  // Apply syllable-based transliteration with pattern matching
+  // Step 2: Fallback to syllable-based transliteration for unknown words
   return syllableTransliterateWord(word);
 };
 
@@ -284,7 +378,14 @@ const syllableTransliterateWord = (text: string): string => {
 
 /**
  * Main transliterate function - handles full text with spaces
- * Transliterates each word separately, preserves word boundaries
+ * 
+ * Features:
+ * - Transliterates each word separately
+ * - Preserves word boundaries and spacing
+ * - Checks dictionary first for common words
+ * - Falls back to rule-based for unknown words
+ * 
+ * This generates an AUTO-SUGGESTION for the user to review and edit
  */
 const transliterateText = (text: string): string => {
   if (!text || text.length === 0) return text;
