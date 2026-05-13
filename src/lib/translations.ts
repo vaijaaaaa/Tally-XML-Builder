@@ -1,5 +1,6 @@
 export const translations = {
   // Sidebar
+  
   dashboard: "Dashboard",
   purchase: "Purchase",
   sales: "Sales",
